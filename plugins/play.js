@@ -32,10 +32,13 @@ ${usedPrefix + command} nombre del video o artista`
       m.chat,
       {
         image: { url: sanka.thumbnail || video.thumbnail },
-        caption: sanka.title || video.title
+        caption: `🎵 ${sanka.title || video.title}`
       },
       { quoted: m }
     )
+
+    // 🔹 Pequeña pausa para evitar que se combine
+    await new Promise(resolve => setTimeout(resolve, 500))
 
     // 🔹 SEGUNDO: Enviar audio por separado
     await conn.sendMessage(
@@ -43,17 +46,7 @@ ${usedPrefix + command} nombre del video o artista`
       {
         audio: { url: audioUrl },
         mimetype: "audio/mpeg",
-        fileName: fileName,
-        contextInfo: {
-          externalAdReply: {
-            title: sanka.title || video.title,
-            body: "Descargado con Sanka Vollerei",
-            thumbnailUrl: sanka.thumbnail || video.thumbnail,
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: v
-          }
-        }
+        fileName: fileName
       },
       { quoted: m }
     )
@@ -70,10 +63,13 @@ ${usedPrefix + command} nombre del video o artista`
         m.chat,
         {
           image: { url: yt.thumbnail },
-          caption: ttl
+          caption: `🎵 ${ttl}`
         },
         { quoted: m }
       )
+
+      // 🔹 Pequeña pausa
+      await new Promise(resolve => setTimeout(resolve, 500))
 
       // 🔹 SEGUNDO: Audio
       await conn.sendMessage(
@@ -96,14 +92,64 @@ ${usedPrefix + command} nombre del video o artista`
           m.chat,
           {
             image: { url: info.videoDetails.thumbnails[0].url },
-            caption: info.videoDetails.title
+            caption: `🎵 ${info.videoDetails.title}`
           },
           { quoted: m }
         )
 
+        // 🔹 Pequeña pausa
+        await new Promise(resolve => setTimeout(resolve, 500))
+
         // 🔹 SEGUNDO: Audio
         await conn.sendMessage(
           m.chat,
+          { 
+            audio: { url: format.url }, 
+            mimetype: "audio/mpeg",
+            fileName: `${info.videoDetails.title}.mp3`
+          },
+          { quoted: m }
+        )
+      } catch (e) {
+        m.reply(`⚠️ Error final: ${e.message}`)
+      }
+    }
+  }
+}
+
+handler.command = ["play"]
+handler.exp = 0
+export default handler
+
+async function search(query, options = {}) {
+  const search = await yts.search({ query, hl: "es", gl: "ES", ...options })
+  return search.videos
+}
+
+function sanitizeFilename(name = "audio") {
+  return String(name).replace(/[\\/:*?"<>|]/g, "").slice(0, 200)
+}
+
+// 🔹 Función para usar Sanka Vollerei
+async function getFromSanka(youtubeUrl) {
+  const endpoint = `https://www.sankavollerei.com/download/ytmp3?apikey=planaai&url=${encodeURIComponent(
+    youtubeUrl
+  )}`
+  const res = await fetch(endpoint)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+  const json = await res.json().catch(() => null)
+  if (!json?.status || !json?.result?.download) {
+    throw new Error("Respuesta inválida de Sanka Vollerei")
+  }
+
+  return {
+    download: json.result.download,
+    title: json.result.title,
+    duration: json.result.duration,
+    thumbnail: json.result.thumbnail
+  }
+}          m.chat,
           { audio: { url: format.url }, mimetype: "audio/mpeg" },
           { quoted: m }
         )
