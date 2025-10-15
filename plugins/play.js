@@ -22,15 +22,25 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
     // 🔹 DESCARGA PRINCIPAL CON SANKA VOLLEREI
     const sanka = await getFromSanka(v)
     const fileName = `${sanitizeFilename(sanka.title || video.title)}.mp3`
-    const audioUrl = sanka.download
 
-    // 🔹 SOLO ENVÍO DE AUDIO
+    // 🔹 ENVÍO DE AUDIO CON MINIATURA
     await conn.sendMessage(
       m.chat,
       {
-        audio: { url: audioUrl },
+        audio: { 
+          url: sanka.download 
+        },
         mimetype: "audio/mpeg",
-        fileName: fileName
+        fileName: fileName,
+        contextInfo: {
+          externalAdReply: {
+            title: sanka.title || video.title,
+            body: `Duración: ${sanka.duration || video.timestamp}`,
+            thumbnailUrl: sanka.thumbnail || video.thumbnail,
+            mediaType: 1,
+            renderLargerThumbnail: true
+          }
+        }
       },
       { quoted: m }
     )
@@ -41,13 +51,23 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
       const yt = await youtubedl(v).catch(async _ => await youtubedlv2(v))
       const dl_url = await yt.audio["128kbps"].download()
       const ttl = await yt.title
+      const thumb = await yt.thumbnail
 
       await conn.sendMessage(
         m.chat,
         {
           audio: { url: dl_url },
           mimetype: "audio/mpeg",
-          fileName: `${ttl}.mp3`
+          fileName: `${ttl}.mp3`,
+          contextInfo: {
+            externalAdReply: {
+              title: ttl,
+              body: `Duración: ${video?.timestamp || 'N/A'}`,
+              thumbnailUrl: thumb,
+              mediaType: 1,
+              renderLargerThumbnail: true
+            }
+          }
         },
         { quoted: m }
       )
@@ -56,10 +76,24 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
         // 🔹 Fallback 2 — ytdl-core directo
         let info = await ytdl.getInfo(v)
         let format = ytdl.chooseFormat(info.formats, { filter: "audioonly" })
+        let thumb = info.videoDetails.thumbnails[info.videoDetails.thumbnails.length - 1].url
 
         await conn.sendMessage(
           m.chat,
-          { audio: { url: format.url }, mimetype: "audio/mpeg" },
+          { 
+            audio: { url: format.url }, 
+            mimetype: "audio/mpeg",
+            fileName: `${info.videoDetails.title}.mp3`,
+            contextInfo: {
+              externalAdReply: {
+                title: info.videoDetails.title,
+                body: `Duración: ${info.videoDetails.lengthSeconds} segundos`,
+                thumbnailUrl: thumb,
+                mediaType: 1,
+                renderLargerThumbnail: true
+              }
+            }
+          },
           { quoted: m }
         )
       } catch (e) {
