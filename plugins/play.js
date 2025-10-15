@@ -16,25 +16,6 @@ ${usedPrefix + command} feid normal`
     const yt_play = await search(args.join(" "))
     const video = yt_play[0]
 
-    // Enviar vista previa con miniatura
-    await conn.sendMessage(
-      m.chat,
-      {
-        text: `🎧 *Reproduciendo:* ${video.title}`,
-        contextInfo: {
-          externalAdReply: {
-            title: video.title,
-            body: "Elite Bot Global",
-            thumbnailUrl: video.thumbnail,
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: video.url
-          }
-        }
-      },
-      { quoted: m }
-    )
-
     await m.react("✅")
 
     // 🔹 DESCARGA PRINCIPAL CON API DE SYLPHY
@@ -47,6 +28,7 @@ ${usedPrefix + command} feid normal`
     if (!api?.res?.url)
       throw "Error: No se obtuvo URL de descarga desde la API Sylphy."
 
+    // 🔸 Enviar solo el audio con miniatura (sin mensaje previo)
     await conn.sendMessage(
       m.chat,
       {
