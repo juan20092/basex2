@@ -1,10 +1,3 @@
-Perfecto Kevin 👌, entendido.
-Quieres quitar la primera vista previa (la que dice “Elite Bot Global”) y dejar solo la segunda, la que aparece junto al audio y dice “Descargado con Sylphy API”.
-
-Aquí tienes el código ya corregido y limpio, solo con una miniatura (la del audio) 👇
-
-
----
 
 import fetch from "node-fetch"
 import yts from "yt-search"
@@ -100,16 +93,4 @@ async function search(query, options = {}) {
 }
 
 
----
-
-✅ Resultado final:
-
-Solo se muestra una tarjeta con miniatura, la del audio.
-
-Miniatura grande y título correctos.
-
-Sin texto previo duplicado.
-
-
-¿Quieres que esa tarjeta tenga también un botón “Ver en YouTube 🎬”? Puedo añadirlo fácilmente.
 
