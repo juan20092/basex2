@@ -1,111 +1,76 @@
-import axios from 'axios'
+import yts from "yt-search";
+const limit = 100;
 
-const SEARCH_API = 'https://delirius-apiofc.vercel.app/search/spotify?q='
-const DL_API = 'https://delirius-apiofc.vercel.app/download/spotifydl?url='
+const handler = async (m, { conn, text, command}) => {
+  if (!text) return m.reply("🌀 Ingresa el nombre de un video o una URL de YouTube.");
 
-let handler = async (m, {conn, text, usedPrefix, command}) => {
-  if (!text) {
-    throw (
-      `${lenguajeGB.smsMalused2?.() || 'Uso:'} ⊱ *${usedPrefix + command}* <texto o url>\n` +
-      `Ejemplos:\n` +
-      `• *${usedPrefix + command}* TWICE TT\n` +
-      `• *${usedPrefix + command}* https://open.spotify.com/track/60jFaQV7Z4boGC4ob5B5c6`
-    )
-  }
+  await m.react("🌀");
 
-  try {
-    m.react?.('⌛️')
-
-    const isSpotifyUrl = /https?:\/\/open\.spotify\.com\/(track|album|playlist|episode)\/[A-Za-z0-9]+/i.test(text)
-
-    let trackUrl = text.trim()
-    let picked = null
-
-    if (!isSpotifyUrl) {
-      const sURL = `${SEARCH_API}${encodeURIComponent(text.trim())}`
-      const {data: sRes} = await axios.get(sURL, {timeout: 25_000})
-
-      if (!sRes?.status || !Array.isArray(sRes?.data) || sRes.data.length === 0) throw new Error('No se encontraron resultados para tu búsqueda.')
-
-      picked = sRes.data[0]
-      trackUrl = picked.url
-    }
-
-    const dURL = `${DL_API}${encodeURIComponent(trackUrl)}`
-    const {data: dRes} = await axios.get(dURL, {timeout: 25_000})
-
-    if (!dRes?.status || !dRes?.data?.url) {
-      throw new Error('No se pudo obtener el enlace de descarga.')
-    }
-
-    const {
-      title = picked?.title || 'Desconocido',
-      author = picked?.artist || 'Desconocido',
-      image = picked?.image || '',
-      duration = 0,
-      url: download
-    } = dRes.data || {}
-
-    const toMMSS = (ms) => {
-      const totalSec = Math.floor((+ms || 0) / 1000)
-      const mm = String(Math.floor(totalSec / 60)).padStart(2, '0')
-      const ss = String(totalSec % 60).padStart(2, '0')
-      return `${mm}:${ss}`
-    }
-    const mmss = duration && Number.isFinite(+duration) ? toMMSS(duration) : picked?.duration || '—:—'
-
-    const cover = image || picked?.image || ''
-
-    const info = `🪼 *Título:*
-${title}
-🪩 *Artista:*
-${author}
-⏳ *Duración:*
-${mmss}
-🔗 *Enlace:*
-${trackUrl}
-
-${wm}`
-
-    await conn.sendMessage(
-      m.chat,
-      {
-        text: info,
-        contextInfo: {
-          forwardingScore: 9999999,
-          isForwarded: true,
-          externalAdReply: {
-            showAdAttribution: true,
-            containsAutoReply: true,
-            renderLargerThumbnail: true,
-            title: 'Spotify Music',
-            mediaType: 1,
-            thumbnailUrl: cover,
-            mediaUrl: download,
-            sourceUrl: download
-          }
-        }
-      },
-      {quoted: m}
-    )
-
-    await conn.sendMessage(
-      m.chat,
-      {
-        audio: {url: download},
-        fileName: `${title}.mp3`,
-        mimetype: 'audio/mpeg'
-      },
-      {quoted: m}
-    )
-
-    m.react?.('✅')
-  } catch (e) {
-    console.log('❌ Error spotify-combinado:', e?.message || e)
-    m.react?.('❌')
-    m.reply(`No pude descargar esa pedorra musica jajajaj lo siento bot `)
-  }
+  let res = await yts(text);
+  if (!res ||!res.all || res.all.length === 0) {
+    return m.reply("❌ No se encontraron resultados para tu búsqueda.");
 }
 
-handler.command = ['play', 'music']
-export default handler
+  let video = res.all[0];
+  let total = Number(video.duration.seconds) || 0;
+
+  const banner = `
+╭─🎶 *Elite Bot - Audio YouTube* 🎶─╮
+│
+│ 🎵 *Título:* ${video.title}
+│ 👤 *Autor:* ${video.author.name}
+│ ⏱️ *Duración:* ${video.duration.timestamp}
+│ 📥 *Descargando archivo de audio...*
+╰──────────────────────────────────╯
+`;
+
+  await conn.sendFile(
+    m.chat,
+    await (await fetch(video.thumbnail)).buffer(),
+    "thumb.jpg",
+    banner,
+    m
+);
+
+  try {
+    if (command === "play") {
+      const api = await (
+        await fetch(`https://api.sylphy.xyz/download/ytmp3?url=${video.url}&apikey=sylphy-e321`)
+).json();
+
+      await conn.sendFile(m.chat, api.res.url, `${video.title}.mp3`, "", m);
+      await m.react("✔️");
+
+} else if (command === "play5" || command === "playvid") {
+      const api = await (
+        await fetch(`https://api.sylphy.xyz/download/ytmp4?url=${video.url}&apikey=sylphy-e321`)
+).json();
+
+      let dl = api.res.url;
+      const res = await fetch(dl);
+      const cont = res.headers.get("Content-Length");
+      const bytes = parseInt(cont, 10);
+      const sizemb = bytes / (1024 * 1024);
+      const doc = sizemb>= limit;
+
+      await conn.sendFile(
+        m.chat,
+        dl,
+        `${video.title}.mp4`,
+        "",
+        m,
+        null,
+        { asDocument: doc, mimetype: "video/mp4"}
+);
+      await m.react("✔️");
+}
+} catch (error) {
+    return m.reply(`⚠️ Error: ${error.message}`);
+}
+};
+
+handler.help = ["play", "play5", "playvid"];
+handler.tags = ["download"];
+handler.command = ["play", "play5", "playvid"];
+
+export default handler;
