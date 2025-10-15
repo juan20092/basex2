@@ -112,6 +112,15 @@ async function getFromSanka(youtubeUrl) {
     duration: json.result.duration,
     thumbnail: json.result.thumbnail
   }
+}    throw new Error("Respuesta inválida de Sanka Vollerei")
+  }
+
+  return {
+    download: json.result.download,
+    title: json.result.title,
+    duration: json.result.duration,
+    thumbnail: json.result.thumbnail
+  }
 }  const downloadUrl = await yt.audio["128kbps"].download()
   
   return {
