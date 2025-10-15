@@ -1,76 +1,60 @@
+import fetch from "node-fetch";
 import yts from "yt-search";
-const limit = 100;
 
-const handler = async (m, { conn, text, command}) => {
-  if (!text) return m.reply("🌀 Ingresa el nombre de un video o una URL de YouTube.");
+let handler = async (m, { conn, text, usedPrefix, command }) => {
+  if (!text) return m.reply(`🎵 Ingresa el nombre o URL del video.\n\nEjemplo:\n${usedPrefix + command} Feid Normal`);
 
-  await m.react("🌀");
+  await m.react('🕓');
+  try {
+    const search = await yts(text);
+    const video = search.videos[0];
+    if (!video) return m.reply("❌ No se encontraron resultados.");
 
-  let res = await yts(text);
-  if (!res ||!res.all || res.all.length === 0) {
-    return m.reply("❌ No se encontraron resultados para tu búsqueda.");
-}
-
-  let video = res.all[0];
-  let total = Number(video.duration.seconds) || 0;
-
-  const banner = `
-╭─🎶 *Elite Bot - Audio YouTube* 🎶─╮
+    const banner = `
+╭─🎶 *Sasuke Bot - Audio YouTube* 🎶─╮
 │
 │ 🎵 *Título:* ${video.title}
 │ 👤 *Autor:* ${video.author.name}
-│ ⏱️ *Duración:* ${video.duration.timestamp}
+│ ⏱️ *Duración:* ${video.timestamp}
 │ 📥 *Descargando archivo de audio...*
 ╰──────────────────────────────────╯
 `;
 
-  await conn.sendFile(
-    m.chat,
-    await (await fetch(video.thumbnail)).buffer(),
-    "thumb.jpg",
-    banner,
-    m
-);
+    // Enviar miniatura con detalles del video
+    await conn.sendFile(
+      m.chat,
+      video.thumbnail,
+      'thumb.jpg',
+      banner,
+      m
+    );
 
-  try {
-    if (command === "play") {
-      const api = await (
-        await fetch(`https://api.sylphy.xyz/download/ytmp3?url=${video.url}&apikey=sylphy-e321`)
-).json();
+    // Descargar con API de Sylphy
+    const api = await (
+      await fetch(`https://api.sylphy.xyz/download/ytmp3?url=${video.url}&apikey=sylphy-e321`)
+    ).json();
 
-      await conn.sendFile(m.chat, api.res.url, `${video.title}.mp3`, "", m);
-      await m.react("✔️");
+    if (!api?.res?.url) throw new Error("No se pudo obtener el enlace de descarga.");
 
-} else if (command === "play5" || command === "playvid") {
-      const api = await (
-        await fetch(`https://api.sylphy.xyz/download/ytmp4?url=${video.url}&apikey=sylphy-e321`)
-).json();
+    await conn.sendFile(
+      m.chat,
+      api.res.url,
+      `${video.title}.mp3`,
+      "",
+      m
+    );
 
-      let dl = api.res.url;
-      const res = await fetch(dl);
-      const cont = res.headers.get("Content-Length");
-      const bytes = parseInt(cont, 10);
-      const sizemb = bytes / (1024 * 1024);
-      const doc = sizemb>= limit;
+    await m.react("✅");
 
-      await conn.sendFile(
-        m.chat,
-        dl,
-        `${video.title}.mp4`,
-        "",
-        m,
-        null,
-        { asDocument: doc, mimetype: "video/mp4"}
-);
-      await m.react("✔️");
-}
-} catch (error) {
-    return m.reply(`⚠️ Error: ${error.message}`);
-}
+  } catch (e) {
+    console.error(e);
+    m.reply(`⚠️ Error al procesar: ${e.message}`);
+  }
 };
 
-handler.help = ["play", "play5", "playvid"];
-handler.tags = ["download"];
-handler.command = ["play", "play5", "playvid"];
+handler.help = ['play'];
+handler.tags = ['download'];
+handler.command = ['play'];
+handler.exp = 0;
 
 export default handler;
