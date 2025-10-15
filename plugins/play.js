@@ -1,5 +1,3 @@
-
-
 import fetch from "node-fetch"
 import yts from "yt-search"
 import ytdl from "ytdl-core"
@@ -29,12 +27,23 @@ ${usedPrefix + command} nombre del video o artista`
     const fileName = `${sanitizeFilename(sanka.title || video.title)}.mp3`
     const audioUrl = sanka.download
 
+    // 🔹 PRIMERO: Enviar miniatura como imagen
+    await conn.sendMessage(
+      m.chat,
+      {
+        image: { url: sanka.thumbnail || video.thumbnail },
+        caption: sanka.title || video.title
+      },
+      { quoted: m }
+    )
+
+    // 🔹 SEGUNDO: Enviar audio por separado
     await conn.sendMessage(
       m.chat,
       {
         audio: { url: audioUrl },
         mimetype: "audio/mpeg",
-        fileName,
+        fileName: fileName,
         contextInfo: {
           externalAdReply: {
             title: sanka.title || video.title,
@@ -56,6 +65,17 @@ ${usedPrefix + command} nombre del video o artista`
       const dl_url = await yt.audio["128kbps"].download()
       const ttl = await yt.title
 
+      // 🔹 PRIMERO: Miniatura
+      await conn.sendMessage(
+        m.chat,
+        {
+          image: { url: yt.thumbnail },
+          caption: ttl
+        },
+        { quoted: m }
+      )
+
+      // 🔹 SEGUNDO: Audio
       await conn.sendMessage(
         m.chat,
         {
@@ -70,6 +90,18 @@ ${usedPrefix + command} nombre del video o artista`
         // 🔹 Fallback 2 — ytdl-core directo
         let info = await ytdl.getInfo(v)
         let format = ytdl.chooseFormat(info.formats, { filter: "audioonly" })
+        
+        // 🔹 PRIMERO: Miniatura
+        await conn.sendMessage(
+          m.chat,
+          {
+            image: { url: info.videoDetails.thumbnails[0].url },
+            caption: info.videoDetails.title
+          },
+          { quoted: m }
+        )
+
+        // 🔹 SEGUNDO: Audio
         await conn.sendMessage(
           m.chat,
           { audio: { url: format.url }, mimetype: "audio/mpeg" },
@@ -104,6 +136,17 @@ async function getFromSanka(youtubeUrl) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
   const json = await res.json().catch(() => null)
+  if (!json?.status || !json?.result?.download) {
+    throw new Error("Respuesta inválida de Sanka Vollerei")
+  }
+
+  return {
+    download: json.result.download,
+    title: json.result.title,
+    duration: json.result.duration,
+    thumbnail: json.result.thumbnail
+  }
+}  const json = await res.json().catch(() => null)
   if (!json?.status || !json?.result?.download) {
     throw new Error("Respuesta inválida de Sanka Vollerei")
   }
