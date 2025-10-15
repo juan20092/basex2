@@ -27,29 +27,40 @@ ${usedPrefix + command} nombre del video o artista`
     const fileName = `${sanitizeFilename(sanka.title || video.title)}.mp3`
     const audioUrl = sanka.download
 
-    // 🔹 PRIMERO: Enviar miniatura como imagen
+    // 🔹 PRIMERO: Enviar miniatura como imagen sin caption
     await conn.sendMessage(
       m.chat,
       {
-        image: { url: sanka.thumbnail || video.thumbnail },
-        caption: `🎵 ${sanka.title || video.title}`
+        image: { url: sanka.thumbnail || video.thumbnail }
+        // SIN CAPTION - esto evita que se agrupe
       },
       { quoted: m }
     )
 
-    // 🔹 Pequeña pausa para evitar que se combine
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 🔹 Pausa más larga
+    await new Promise(resolve => setTimeout(resolve, 1000))
 
-    // 🔹 SEGUNDO: Enviar audio por separado
+    // 🔹 SEGUNDO: Enviar audio por separado con contexto diferente
     await conn.sendMessage(
       m.chat,
       {
         audio: { url: audioUrl },
         mimetype: "audio/mpeg",
-        fileName: fileName
-      },
-      { quoted: m }
+        fileName: fileName,
+        contextInfo: {
+          externalAdReply: {
+            title: sanka.title || video.title,
+            body: "🎵 Audio listo • Haz clic para más",
+            thumbnailUrl: sanka.thumbnail || video.thumbnail,
+            mediaType: 1,
+            renderLargerThumbnail: false,
+            sourceUrl: v
+          }
+        }
+      }
+      // SIN quoted: m - esto hace que no se relacione con el mensaje anterior
     )
+
   } catch (err) {
     console.log("❌ Error en descarga principal Sanka:", err)
     try {
@@ -58,28 +69,25 @@ ${usedPrefix + command} nombre del video o artista`
       const dl_url = await yt.audio["128kbps"].download()
       const ttl = await yt.title
 
-      // 🔹 PRIMERO: Miniatura
+      // Miniatura sin caption
       await conn.sendMessage(
         m.chat,
         {
-          image: { url: yt.thumbnail },
-          caption: `🎵 ${ttl}`
+          image: { url: yt.thumbnail }
         },
         { quoted: m }
       )
 
-      // 🔹 Pequeña pausa
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
-      // 🔹 SEGUNDO: Audio
+      // Audio separado
       await conn.sendMessage(
         m.chat,
         {
           audio: { url: dl_url },
           mimetype: "audio/mpeg",
           fileName: `${ttl}.mp3`
-        },
-        { quoted: m }
+        }
       )
     } catch {
       try {
@@ -87,28 +95,25 @@ ${usedPrefix + command} nombre del video o artista`
         let info = await ytdl.getInfo(v)
         let format = ytdl.chooseFormat(info.formats, { filter: "audioonly" })
         
-        // 🔹 PRIMERO: Miniatura
+        // Miniatura sin caption
         await conn.sendMessage(
           m.chat,
           {
-            image: { url: info.videoDetails.thumbnails[0].url },
-            caption: `🎵 ${info.videoDetails.title}`
+            image: { url: info.videoDetails.thumbnails[0].url }
           },
           { quoted: m }
         )
 
-        // 🔹 Pequeña pausa
-        await new Promise(resolve => setTimeout(resolve, 500))
+        await new Promise(resolve => setTimeout(resolve, 1000))
 
-        // 🔹 SEGUNDO: Audio
+        // Audio separado
         await conn.sendMessage(
           m.chat,
           { 
             audio: { url: format.url }, 
             mimetype: "audio/mpeg",
             fileName: `${info.videoDetails.title}.mp3`
-          },
-          { quoted: m }
+          }
         )
       } catch (e) {
         m.reply(`⚠️ Error final: ${e.message}`)
@@ -149,60 +154,4 @@ async function getFromSanka(youtubeUrl) {
     duration: json.result.duration,
     thumbnail: json.result.thumbnail
   }
-}          m.chat,
-          { audio: { url: format.url }, mimetype: "audio/mpeg" },
-          { quoted: m }
-        )
-      } catch (e) {
-        m.reply(`⚠️ Error final: ${e.message}`)
-      }
-    }
-  }
 }
-
-handler.command = ["play"]
-handler.exp = 0
-export default handler
-
-async function search(query, options = {}) {
-  const search = await yts.search({ query, hl: "es", gl: "ES", ...options })
-  return search.videos
-}
-
-function sanitizeFilename(name = "audio") {
-  return String(name).replace(/[\\/:*?"<>|]/g, "").slice(0, 200)
-}
-
-// 🔹 Función para usar Sanka Vollerei
-async function getFromSanka(youtubeUrl) {
-  const endpoint = `https://www.sankavollerei.com/download/ytmp3?apikey=planaai&url=${encodeURIComponent(
-    youtubeUrl
-  )}`
-  const res = await fetch(endpoint)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-  const json = await res.json().catch(() => null)
-  if (!json?.status || !json?.result?.download) {
-    throw new Error("Respuesta inválida de Sanka Vollerei")
-  }
-
-  return {
-    download: json.result.download,
-    title: json.result.title,
-    duration: json.result.duration,
-    thumbnail: json.result.thumbnail
-  }
-}  const json = await res.json().catch(() => null)
-  if (!json?.status || !json?.result?.download) {
-    throw new Error("Respuesta inválida de Sanka Vollerei")
-  }
-
-  return {
-    download: json.result.download,
-    title: json.result.title,
-    duration: json.result.duration,
-    thumbnail: json.result.thumbnail
-  }
-}
-
-
