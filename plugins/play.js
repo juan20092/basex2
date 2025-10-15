@@ -17,26 +17,25 @@ let handler = async (m, { conn, text, args, usedPrefix, command }) => {
 
     const v = video.url;
 
-    // 🔹 Enviar miniatura estilo preview (no descargable)
-    await conn.sendMessage(
-      m.chat,
-      {
-        image: { url: video.thumbnail }, // miniatura real
-        caption: `🎵 ${video.title}`,
-        contextInfo: {
-          externalAdReply: {
-            title: video.title,
-            body: "",
-            thumbnailUrl: video.thumbnail,
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: video.url
-          }
-        }
-      },
-      { quoted: m }
-    );
-
+    // Enviar miniatura tipo preview, sin que se descargue
+await conn.sendMessage(
+  m.chat,
+  {
+    text: `🎵 ${video.title}\n🔗 ${video.url}`,
+    contextInfo: {
+      externalAdReply: {
+        title: video.title,
+        body: "Elite Bot Global",
+        thumbnailUrl: video.thumbnail, // thumbnail para preview
+        mediaType: 1,                  // tipo video
+        renderLargerThumbnail: true,
+        showAdAttribution: true,
+        sourceUrl: video.url            // link que abre YouTube
+      }
+    }
+  },
+  { quoted: m }
+);
     // 🔹 Intentar descarga con Sanka Vollerei
     let audioUrl;
     try {
