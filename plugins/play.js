@@ -15,17 +15,26 @@ let handler = async (m, { conn, text, args, usedPrefix, command }) => {
     const video = searchResults.videos[0];
     if (!video) throw new Error("No se encontró el video");
 
-    // 🔹 Enviar miniatura + info del video
+    const v = video.url;
+
+    // 🔹 Enviar miniatura tipo "preview" (no descargable)
     await conn.sendMessage(
       m.chat,
       {
-        image: { url: video.thumbnail },
-        caption: `🎵 ${video.title}\n🔗 ${video.url}`
+        text: `🎵 ${video.title}`,
+        contextInfo: {
+          externalAdReply: {
+            title: video.title,
+            body: "",
+            thumbnailUrl: video.thumbnail,
+            mediaType: 1,
+            renderLargerThumbnail: true,
+            sourceUrl: video.url
+          }
+        }
       },
       { quoted: m }
     );
-
-    const v = video.url;
 
     // 🔹 Intentar descarga con Sanka Vollerei
     let audioUrl;
@@ -104,6 +113,17 @@ async function getFromSanka(youtubeUrl) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
   const json = await res.json().catch(() => null);
+  if (!json?.status || !json?.result?.download) {
+    throw new Error("Respuesta inválida de Sanka Vollerei");
+  }
+
+  return {
+    download: json.result.download,
+    title: json.result.title,
+    duration: json.result.duration,
+    thumbnail: json.result.thumbnail
+  };
+}  const json = await res.json().catch(() => null);
   if (!json?.status || !json?.result?.download) {
     throw new Error("Respuesta inválida de Sanka Vollerei");
   }
