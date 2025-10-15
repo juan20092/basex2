@@ -2,6 +2,9 @@ import fetch from "node-fetch"
 import yts from "yt-search"
 import ytdl from "ytdl-core"
 import { youtubedl, youtubedlv2 } from "@bochilteam/scraper"
+import { createRequire } from "module"
+const require = createRequire(import.meta.url)
+const { ytmp3 } = require("@hiudyy/ytdl") // API funcional
 
 let handler = async (m, { conn, command, args, text, usedPrefix }) => {
   if (!text)
@@ -18,39 +21,35 @@ ${usedPrefix + command} nombre del video o artista`
     const video = yt_play[0]
     if (!video) throw "No se encontró ningún video con ese término."
 
-    const v = video.url // URL del video para fallback
+    const v = video.url // URL del video para fallbacks
 
-    // 🔹 DESCARGA PRINCIPAL CON SANKA VOLLEREI
-    const sanka = await getFromSanka(v)
-    const fileName = `${sanitizeFilename(sanka.title || video.title)}.mp3`
-    const audioUrl = sanka.download
+    await m.react("✅")
 
-    // 🔹 Enviar solo el audio
+    // 🔹 DESCARGA PRINCIPAL CON API @hiudyy/ytdl
+    const result = await ytmp3(v)
+    const fileName = `${sanitizeFilename(video.title)}.mp3`
+
     await conn.sendMessage(
       m.chat,
       {
-        audio: { url: audioUrl },
+        audio: { url: result },
         mimetype: "audio/mpeg",
-        fileName: fileName,
+        fileName,
         contextInfo: {
           externalAdReply: {
-            title: sanka.title || video.title,
-            body: "Descargado con Sanka Vollerei",
-            thumbnailUrl: sanka.thumbnail || video.thumbnail,
+            title: video.title,
+            body: "Descargado con API @hiudyy/ytdl",
+            thumbnailUrl: video.thumbnail,
             mediaType: 1,
             renderLargerThumbnail: true,
-            sourceUrl: v
+            sourceUrl: video.url
           }
         }
       },
       { quoted: m }
     )
-    
-    // 🔹 Reacción de visto SOLO cuando ya se envió el audio
-    await m.react("✅")
-
   } catch (err) {
-    console.log("❌ Error en descarga principal Sanka:", err)
+    console.log("❌ Error en descarga principal:", err)
     try {
       // 🔹 Fallback 1 — Bochilteam Scraper
       const yt = await youtubedl(v).catch(async _ => await youtubedlv2(v))
@@ -66,9 +65,6 @@ ${usedPrefix + command} nombre del video o artista`
         },
         { quoted: m }
       )
-      
-      await m.react("✅")
-      
     } catch {
       try {
         // 🔹 Fallback 2 — ytdl-core directo
@@ -79,11 +75,7 @@ ${usedPrefix + command} nombre del video o artista`
           { audio: { url: format.url }, mimetype: "audio/mpeg" },
           { quoted: m }
         )
-        
-        await m.react("✅")
-        
       } catch (e) {
-        await m.react("❌")
         m.reply(`⚠️ Error final: ${e.message}`)
       }
     }
@@ -100,10 +92,8 @@ async function search(query, options = {}) {
 }
 
 function sanitizeFilename(name = "audio") {
-  return String(name).replace(/[\\/:
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        // Audio separado
+  return String(name).replace(/[\\/:*?"<>|]/g, "").slice(0, 200)
+}        // Audio separado
         await conn.sendMessage(
           m.chat,
           { 
