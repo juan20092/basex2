@@ -17,11 +17,12 @@ let handler = async (m, { conn, text, args, usedPrefix, command }) => {
 
     const v = video.url;
 
-    // 🔹 Enviar miniatura tipo "preview" (no descargable)
+    // 🔹 Enviar miniatura estilo preview (no descargable)
     await conn.sendMessage(
       m.chat,
       {
-        text: `🎵 ${video.title}`,
+        image: { url: video.thumbnail }, // miniatura real
+        caption: `🎵 ${video.title}`,
         contextInfo: {
           externalAdReply: {
             title: video.title,
@@ -42,7 +43,7 @@ let handler = async (m, { conn, text, args, usedPrefix, command }) => {
       const sanka = await getFromSanka(v);
       audioUrl = sanka.download;
 
-      // Enviar audio
+      // Enviar audio separado
       await conn.sendMessage(
         m.chat,
         {
@@ -55,6 +56,7 @@ let handler = async (m, { conn, text, args, usedPrefix, command }) => {
       );
     } catch (e) {
       console.log("❌ Error Sanka Vollerei:", e.message || e);
+
       // 🔹 Fallback 1 — Bochilteam Scraper
       try {
         const yt = await youtubedl(v).catch(async () => await youtubedlv2(v));
@@ -106,6 +108,24 @@ function sanitizeFilename(name = "audio") {
 
 // 🔹 Función para usar Sanka Vollerei
 async function getFromSanka(youtubeUrl) {
+  const endpoint = `https://www.sankavollerei.com/download/ytmp3?apikey=planaai&url=${encodeURIComponent(
+    youtubeUrl
+  )}`;
+  const res = await fetch(endpoint);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const json = await res.json().catch(() => null);
+  if (!json?.status || !json?.result?.download) {
+    throw new Error("Respuesta inválida de Sanka Vollerei");
+  }
+
+  return {
+    download: json.result.download,
+    title: json.result.title,
+    duration: json.result.duration,
+    thumbnail: json.result.thumbnail
+  };
+}async function getFromSanka(youtubeUrl) {
   const endpoint = `https://www.sankavollerei.com/download/ytmp3?apikey=planaai&url=${encodeURIComponent(
     youtubeUrl
   )}`;
