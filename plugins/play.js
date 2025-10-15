@@ -19,12 +19,12 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
 
     await m.react("✅")
 
-    // 🔹 DESCARGA PRINCIPAL CON SANKA VOLLEREI (64kbps para más velocidad)
+    // 🔹 DESCARGA PRINCIPAL CON SANKA VOLLEREI
     const sanka = await getFromSanka(v)
     const fileName = `${sanitizeFilename(sanka.title || video.title)}.mp3`
 
     // 🔹 ENVÍO DE AUDIO CON MINIATURA
-    const sentMsg = await conn.sendMessage(
+    await conn.sendMessage(
       m.chat,
       {
         audio: { 
@@ -44,22 +44,16 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
       },
       { quoted: m }
     )
-
-    // 🔹 MARCAR COMO VISTO INMEDIATAMENTE
-    if (sentMsg) {
-      await conn.sendReadReceipt(m.chat, m.sender, [sentMsg.key.id])
-    }
-
   } catch (err) {
     console.log("❌ Error en descarga principal Sanka:", err)
     try {
-      // 🔹 Fallback 1 — Bochilteam Scraper (64kbps)
+      // 🔹 Fallback 1 — Bochilteam Scraper
       const yt = await youtubedl(v).catch(async _ => await youtubedlv2(v))
-      const dl_url = await yt.audio["64kbps"].download().catch(async () => await yt.audio["128kbps"].download())
+      const dl_url = await yt.audio["128kbps"].download()
       const ttl = await yt.title
       const thumb = await yt.thumbnail
 
-      const sentMsg = await conn.sendMessage(
+      await conn.sendMessage(
         m.chat,
         {
           audio: { url: dl_url },
@@ -77,23 +71,14 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
         },
         { quoted: m }
       )
-
-      // 🔹 MARCAR COMO VISTO INMEDIATAMENTE
-      if (sentMsg) {
-        await conn.sendReadReceipt(m.chat, m.sender, [sentMsg.key.id])
-      }
-
     } catch {
       try {
-        // 🔹 Fallback 2 — ytdl-core directo (calidad más baja)
+        // 🔹 Fallback 2 — ytdl-core directo
         let info = await ytdl.getInfo(v)
-        let format = ytdl.chooseFormat(info.formats, { 
-          filter: "audioonly",
-          quality: "lowest"
-        })
+        let format = ytdl.chooseFormat(info.formats, { filter: "audioonly" })
         let thumb = info.videoDetails.thumbnails[info.videoDetails.thumbnails.length - 1].url
 
-        const sentMsg = await conn.sendMessage(
+        await conn.sendMessage(
           m.chat,
           { 
             audio: { url: format.url }, 
@@ -103,6 +88,54 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
               externalAdReply: {
                 title: info.videoDetails.title,
                 body: `Duración: ${info.videoDetails.lengthSeconds} segundos`,
+                thumbnailUrl: thumb,
+                mediaType: 1,
+                renderLargerThumbnail: true
+              }
+            }
+          },
+          { quoted: m }
+        )
+      } catch (e) {
+        m.reply(`⚠️ Error final: ${e.message}`)
+      }
+    }
+  }
+}
+
+handler.command = ["play"]
+handler.exp = 0
+export default handler
+
+async function search(query, options = {}) {
+  const search = await yts.search({ query, hl: "es", gl: "ES", ...options })
+  return search.videos
+}
+
+function sanitizeFilename(name = "audio") {
+  return String(name).replace(/[\\/:*?"<>|]/g, "").slice(0, 200)
+}
+
+// 🔹 Función para usar Sanka Vollerei
+async function getFromSanka(youtubeUrl) {
+  const endpoint = `https://www.sankavollerei.com/download/ytmp3?apikey=planaai&url=${encodeURIComponent(
+    youtubeUrl
+  )}`
+  const res = await fetch(endpoint)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+  const json = await res.json().catch(() => null)
+  if (!json?.status || !json?.result?.download) {
+    throw new Error("Respuesta inválida de Sanka Vollerei")
+  }
+
+  return {
+    download: json.result.download,
+    title: json.result.title,
+    duration: json.result.duration,
+    thumbnail: json.result.thumbnail
+  }
+}
                 thumbnailUrl: thumb,
                 mediaType: 1,
                 renderLargerThumbnail: true
