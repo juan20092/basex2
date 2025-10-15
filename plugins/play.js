@@ -101,47 +101,4 @@ async function getFromSanka(youtubeUrl) {
     duration: json.result.duration,
     thumbnail: json.result.thumbnail
   }
-}          m.chat,
-          { audio: { url: format.url }, mimetype: "audio/mpeg" },
-          { quoted: m }
-        )
-      } catch (e) {
-        m.reply(`⚠️ Error final: ${e.message}`)
-      }
-    }
-  }
-}
-
-handler.command = ["play"]
-handler.exp = 0
-export default handler
-
-async function search(query, options = {}) {
-  const search = await yts.search({ query, hl: "es", gl: "ES", ...options })
-  return search.videos
-}
-
-function sanitizeFilename(name = "audio") {
-  return String(name).replace(/[\\/:*?"<>|]/g, "").slice(0, 200)
-}
-
-// 🔹 Función para usar Sanka Vollerei
-async function getFromSanka(youtubeUrl) {
-  const endpoint = `https://www.sankavollerei.com/download/ytmp3?apikey=planaai&url=${encodeURIComponent(
-    youtubeUrl
-  )}`
-  const res = await fetch(endpoint)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-  const json = await res.json().catch(() => null)
-  if (!json?.status || !json?.result?.download) {
-    throw new Error("Respuesta inválida de Sanka Vollerei")
-  }
-
-  return {
-    download: json.result.download,
-    title: json.result.title,
-    duration: json.result.duration,
-    thumbnail: json.result.thumbnail
-  }
 }
