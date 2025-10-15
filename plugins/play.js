@@ -27,22 +27,23 @@ ${usedPrefix + command} nombre del video o artista`
     const fileName = `${sanitizeFilename(sanka.title || video.title)}.mp3`
     const audioUrl = sanka.download
 
+    // 🔸 Enviar miniatura como mensaje separado
+    await conn.sendMessage(
+      m.chat,
+      {
+        image: { url: sanka.thumbnail || video.thumbnail },
+        caption: `🎵 ${sanka.title || video.title}\n🔗 ${v}`
+      },
+      { quoted: m }
+    )
+
+    // 🔸 Enviar audio puro inmediatamente después
     await conn.sendMessage(
       m.chat,
       {
         audio: { url: audioUrl },
         mimetype: "audio/mpeg",
-        fileName,
-        contextInfo: {
-          externalAdReply: {
-            title: sanka.title || video.title,
-            body: "Descargado con Sanka Vollerei",
-            thumbnailUrl: sanka.thumbnail || video.thumbnail,
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: v
-          }
-        }
+        fileName
       },
       { quoted: m }
     )
@@ -54,6 +55,17 @@ ${usedPrefix + command} nombre del video o artista`
       const dl_url = await yt.audio["128kbps"].download()
       const ttl = await yt.title
 
+      // Miniatura separado
+      await conn.sendMessage(
+        m.chat,
+        {
+          image: { url: yt.thumbnail },
+          caption: `🎵 ${ttl}\n🔗 ${v}`
+        },
+        { quoted: m }
+      )
+
+      // Audio separado
       await conn.sendMessage(
         m.chat,
         {
@@ -68,6 +80,18 @@ ${usedPrefix + command} nombre del video o artista`
         // 🔹 Fallback 2 — ytdl-core directo
         let info = await ytdl.getInfo(v)
         let format = ytdl.chooseFormat(info.formats, { filter: "audioonly" })
+
+        // Miniatura
+        await conn.sendMessage(
+          m.chat,
+          {
+            image: { url: info.videoDetails.thumbnails[0].url },
+            caption: `🎵 ${info.videoDetails.title}\n🔗 ${v}`
+          },
+          { quoted: m }
+        )
+
+        // Audio
         await conn.sendMessage(
           m.chat,
           { audio: { url: format.url }, mimetype: "audio/mpeg" },
@@ -93,7 +117,7 @@ function sanitizeFilename(name = "audio") {
   return String(name).replace(/[\\/:*?"<>|]/g, "").slice(0, 200)
 }
 
-// 🔹 Función para usar Sanka Vollerei
+// 🔹 Función Sanka Vollerei
 async function getFromSanka(youtubeUrl) {
   const endpoint = `https://www.sankavollerei.com/download/ytmp3?apikey=planaai&url=${encodeURIComponent(
     youtubeUrl
