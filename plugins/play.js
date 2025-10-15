@@ -27,7 +27,17 @@ ${usedPrefix + command} nombre del video o artista`
     const fileName = `${sanitizeFilename(sanka.title || video.title)}.mp3`
     const audioUrl = sanka.download
 
-    // 🔹 ENVIAR SOLO EL AUDIO (eliminado el envío de imagen por separado)
+    // 🔹 PRIMERO: Enviar miniatura como imagen
+    await conn.sendMessage(
+      m.chat,
+      {
+        image: { url: sanka.thumbnail || video.thumbnail },
+        caption: sanka.title || video.title
+      },
+      { quoted: m }
+    )
+
+    // 🔹 SEGUNDO: Enviar audio por separado
     await conn.sendMessage(
       m.chat,
       {
@@ -55,7 +65,17 @@ ${usedPrefix + command} nombre del video o artista`
       const dl_url = await yt.audio["128kbps"].download()
       const ttl = await yt.title
 
-      // 🔹 ENVIAR SOLO EL AUDIO (eliminado el envío de imagen por separado)
+      // 🔹 PRIMERO: Miniatura
+      await conn.sendMessage(
+        m.chat,
+        {
+          image: { url: yt.thumbnail },
+          caption: ttl
+        },
+        { quoted: m }
+      )
+
+      // 🔹 SEGUNDO: Audio
       await conn.sendMessage(
         m.chat,
         {
@@ -70,8 +90,18 @@ ${usedPrefix + command} nombre del video o artista`
         // 🔹 Fallback 2 — ytdl-core directo
         let info = await ytdl.getInfo(v)
         let format = ytdl.chooseFormat(info.formats, { filter: "audioonly" })
+        
+        // 🔹 PRIMERO: Miniatura
+        await conn.sendMessage(
+          m.chat,
+          {
+            image: { url: info.videoDetails.thumbnails[0].url },
+            caption: info.videoDetails.title
+          },
+          { quoted: m }
+        )
 
-        // 🔹 ENVIAR SOLO EL AUDIO (eliminado el envío de imagen por separado)
+        // 🔹 SEGUNDO: Audio
         await conn.sendMessage(
           m.chat,
           { audio: { url: format.url }, mimetype: "audio/mpeg" },
@@ -95,3 +125,25 @@ async function search(query, options = {}) {
 
 function sanitizeFilename(name = "audio") {
   return String(name).replace(/[\\/:*?"<>|]/g, "").slice(0, 200)
+}
+
+// 🔹 Función para usar Sanka Vollerei
+async function getFromSanka(youtubeUrl) {
+  const endpoint = `https://www.sankavollerei.com/download/ytmp3?apikey=planaai&url=${encodeURIComponent(
+    youtubeUrl
+  )}`
+  const res = await fetch(endpoint)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+  const json = await res.json().catch(() => null)
+  if (!json?.status || !json?.result?.download) {
+    throw new Error("Respuesta inválida de Sanka Vollerei")
+  }
+
+  return {
+    download: json.result.download,
+    title: json.result.title,
+    duration: json.result.duration,
+    thumbnail: json.result.thumbnail
+  }
+}
