@@ -1,133 +1,111 @@
-import fetch from "node-fetch"
-import yts from "yt-search"
-import ytdl from "ytdl-core"
-import { youtubedl, youtubedlv2 } from "@bochilteam/scraper"
+import fetch from "node-fetch";
+import yts from "yt-search";
+import ytdl from "ytdl-core";
+import { youtubedl, youtubedlv2 } from "@bochilteam/scraper";
 
-let handler = async (m, { conn, command, args, text, usedPrefix }) => {
-  if (!text)
-    throw `¿Qué canción quieres descargar?
-
-Uso:
-${usedPrefix + command} nombre del video o artista`
+let handler = async (m, { conn, text, args, usedPrefix, command }) => {
+  if (!text || !text.trim())
+    throw `⭐ 𝘌𝘯𝘷𝘪𝘢 𝘦𝘭 𝘯𝘰𝘮𝘣𝘳𝘦 𝘥𝘦 𝘭𝘢 𝘤𝘢𝘯𝘤𝘪ó𝘯\n\n» 𝘌𝘫𝘦𝘮𝘱𝘭𝘰: ${usedPrefix + command} Bad Bunny - Monaco`;
 
   try {
-    await m.react("🕓")
+    await conn.sendMessage(m.chat, { react: { text: "🕒", key: m.key } });
 
-    // 🔹 Búsqueda en YouTube
-    const yt_play = await search(args.join(" "))
-    const video = yt_play[0]
-    if (!video) throw "No se encontró ningún video con ese término."
+    // 🔹 Búsqueda rápida en YouTube
+    const searchResults = await yts({ query: text.trim(), hl: "es", gl: "ES" });
+    const video = searchResults.videos[0];
+    if (!video) throw new Error("No se encontró el video");
 
-    const v = video.url // URL del video para fallback
-
-    await m.react("✅")
-
-    // 🔹 DESCARGA PRINCIPAL CON SANKA VOLLEREI
-    const sanka = await getFromSanka(v)
-    const fileName = `${sanitizeFilename(sanka.title || video.title)}.mp3`
-    const audioUrl = sanka.download
-
-    // 🔸 Enviar miniatura como mensaje separado
+    // 🔹 Enviar miniatura + info del video
     await conn.sendMessage(
       m.chat,
       {
-        image: { url: sanka.thumbnail || video.thumbnail },
-        caption: `🎵 ${sanka.title || video.title}\n🔗 ${v}`
+        image: { url: video.thumbnail },
+        caption: `🎵 ${video.title}\n🔗 ${video.url}`
       },
       { quoted: m }
-    )
+    );
 
-    // 🔸 Enviar audio puro inmediatamente después
-    await conn.sendMessage(
-      m.chat,
-      {
-        audio: { url: audioUrl },
-        mimetype: "audio/mpeg",
-        fileName
-      },
-      { quoted: m }
-    )
-  } catch (err) {
-    console.log("❌ Error en descarga principal Sanka:", err)
+    const v = video.url;
+
+    // 🔹 Intentar descarga con Sanka Vollerei
+    let audioUrl;
     try {
-      // 🔹 Fallback 1 — Bochilteam Scraper
-      const yt = await youtubedl(v).catch(async _ => await youtubedlv2(v))
-      const dl_url = await yt.audio["128kbps"].download()
-      const ttl = await yt.title
+      const sanka = await getFromSanka(v);
+      audioUrl = sanka.download;
 
-      // Miniatura separado
+      // Enviar audio
       await conn.sendMessage(
         m.chat,
         {
-          image: { url: yt.thumbnail },
-          caption: `🎵 ${ttl}\n🔗 ${v}`
-        },
-        { quoted: m }
-      )
-
-      // Audio separado
-      await conn.sendMessage(
-        m.chat,
-        {
-          audio: { url: dl_url },
+          audio: { url: audioUrl },
           mimetype: "audio/mpeg",
-          fileName: `${ttl}.mp3`
+          fileName: `${sanitizeFilename(sanka.title || video.title)}.mp3`,
+          ptt: false
         },
         { quoted: m }
-      )
-    } catch {
+      );
+    } catch (e) {
+      console.log("❌ Error Sanka Vollerei:", e.message || e);
+      // 🔹 Fallback 1 — Bochilteam Scraper
       try {
-        // 🔹 Fallback 2 — ytdl-core directo
-        let info = await ytdl.getInfo(v)
-        let format = ytdl.chooseFormat(info.formats, { filter: "audioonly" })
+        const yt = await youtubedl(v).catch(async () => await youtubedlv2(v));
+        const dl_url = await yt.audio["128kbps"].download();
+        const ttl = yt.title;
 
-        // Miniatura
         await conn.sendMessage(
           m.chat,
-          {
-            image: { url: info.videoDetails.thumbnails[0].url },
-            caption: `🎵 ${info.videoDetails.title}\n🔗 ${v}`
-          },
+          { audio: { url: dl_url }, mimetype: "audio/mpeg", fileName: `${ttl}.mp3` },
           { quoted: m }
-        )
+        );
+      } catch {
+        // 🔹 Fallback 2 — ytdl-core
+        try {
+          const info = await ytdl.getInfo(v);
+          const format = ytdl.chooseFormat(info.formats, { filter: "audioonly" });
 
-        // Audio
-        await conn.sendMessage(
-          m.chat,
-          { audio: { url: format.url }, mimetype: "audio/mpeg" },
-          { quoted: m }
-        )
-      } catch (e) {
-        m.reply(`⚠️ Error final: ${e.message}`)
+          await conn.sendMessage(
+            m.chat,
+            { audio: { url: format.url }, mimetype: "audio/mpeg" },
+            { quoted: m }
+          );
+        } catch (err) {
+          m.reply(`⚠️ Error final: ${err.message}`);
+        }
       }
     }
+
+    await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
+
+  } catch (error) {
+    console.error("Error:", error);
+    await conn.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
+    const errorMsg =
+      typeof error === "string"
+        ? error
+        : `❌ *Error:* ${error.message || "Ocurrió un problema"}\n\n🔸 *Posibles soluciones:*\n• Verifica el nombre de la canción\n• Intenta con otro tema\n• Prueba más tarde`;
+    await conn.sendMessage(m.chat, { text: errorMsg }, { quoted: m });
   }
-}
+};
 
-handler.command = ["play"]
-handler.exp = 0
-export default handler
-
-async function search(query, options = {}) {
-  const search = await yts.search({ query, hl: "es", gl: "ES", ...options })
-  return search.videos
-}
+handler.command = ["play", "playaudio", "ytmusic"];
+handler.exp = 0;
+export default handler;
 
 function sanitizeFilename(name = "audio") {
-  return String(name).replace(/[\\/:*?"<>|]/g, "").slice(0, 200)
+  return String(name).replace(/[\\/:*?"<>|]/g, "").slice(0, 200);
 }
 
-// 🔹 Función Sanka Vollerei
+// 🔹 Función para usar Sanka Vollerei
 async function getFromSanka(youtubeUrl) {
   const endpoint = `https://www.sankavollerei.com/download/ytmp3?apikey=planaai&url=${encodeURIComponent(
     youtubeUrl
-  )}`
-  const res = await fetch(endpoint)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  )}`;
+  const res = await fetch(endpoint);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-  const json = await res.json().catch(() => null)
+  const json = await res.json().catch(() => null);
   if (!json?.status || !json?.result?.download) {
-    throw new Error("Respuesta inválida de Sanka Vollerei")
+    throw new Error("Respuesta inválida de Sanka Vollerei");
   }
 
   return {
@@ -135,5 +113,5 @@ async function getFromSanka(youtubeUrl) {
     title: json.result.title,
     duration: json.result.duration,
     thumbnail: json.result.thumbnail
-  }
+  };
 }
