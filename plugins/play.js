@@ -1,109 +1,118 @@
-import { ytdl } from "@bochilteam/scraper"
+import fetch from "node-fetch"
 import yts from "yt-search"
-import ytdlCore from "ytdl-core"
+import ytdl from "ytdl-core"
+import { youtubedl, youtubedlv2 } from "@bochilteam/scraper"
 
 let handler = async (m, { conn, command, args, text, usedPrefix }) => {
-  if (!text) throw `🎵 ¿Qué canción quieres descargar?\n\nUso: ${usedPrefix + command} <nombre del video>`
-  
-  // 🔹 Validación de entrada
-  if (text.length > 100) throw "❌ La búsqueda es demasiado larga (máx. 100 caracteres)"
-  
+  if (!text)
+    throw `¿Qué canción quieres descargar?
+
+Uso:
+${usedPrefix + command} nombre del video o artista`
+
   try {
     await m.react("🕓")
-    
-    // 🔹 Búsqueda con timeout
-    const searchResults = await Promise.race([
-      search(args.join(" ")),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout en búsqueda")), 15000)
-      )
-    ])
-    
-    const video = searchResults[0]
-    if (!video) throw "❌ No se encontró ningún video con ese término"
-    
-    await m.react("✅")
-    
-    // 🔹 Intentar descargas en orden de preferencia
-    const audioData = await tryDownloadMethods(video.url, video.title)
-    
-    await conn.sendMessage(m.chat, {
-      audio: { url: audioData.url },
-      mimetype: "audio/mpeg",
-      fileName: audioData.filename,
-      contextInfo: {
-        externalAdReply: {
-          title: audioData.title || video.title,
-          body: "🎶 Descarga completada",
-          thumbnailUrl: audioData.thumbnail || video.thumbnail,
-          mediaType: 1,
-          renderLargerThumbnail: true,
-          sourceUrl: video.url
-        }
-      }
-    }, { quoted: m })
-    
-  } catch (error) {
-    console.error("❌ Error general:", error)
-    await m.react("❌")
-    await m.reply(`⚠️ Error: ${error.message}`)
-  }
-}
 
-// 🔹 Función mejorada de descarga con métodos ordenados
-async function tryDownloadMethods(url, title) {
-  const methods = [
-    { name: "Sanka Vollerei", fn: getFromSanka },
-    { name: "Bochilteam", fn: getFromBochilteam },
-    { name: "ytdl-core", fn: getFromYtdlCore }
-  ]
-  
-  for (const method of methods) {
+    // 🔹 Búsqueda en YouTube
+    const yt_play = await search(args.join(" "))
+    const video = yt_play[0]
+    if (!video) throw "No se encontró ningún video con ese término."
+
+    const v = video.url // URL del video para fallback
+
+    await m.react("✅")
+
+    // 🔹 DESCARGA PRINCIPAL CON SANKA VOLLEREI
+    const sanka = await getFromSanka(v)
+    const fileName = `${sanitizeFilename(sanka.title || video.title)}.mp3`
+    const audioUrl = sanka.download
+
+    await conn.sendMessage(
+      m.chat,
+      {
+        audio: { url: audioUrl },
+        mimetype: "audio/mpeg",
+        fileName,
+        contextInfo: {
+          externalAdReply: {
+            title: sanka.title || video.title,
+            body: "Descargado con Sanka Vollerei",
+            thumbnailUrl: sanka.thumbnail || video.thumbnail,
+            mediaType: 1,
+            renderLargerThumbnail: true,
+            sourceUrl: v
+          }
+        }
+      },
+      { quoted: m }
+    )
+  } catch (err) {
+    console.log("❌ Error en descarga principal Sanka:", err)
     try {
-      console.log(`🔄 Intentando descarga con: ${method.name}`)
-      const result = await Promise.race([
-        method.fn(url, title),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error(`Timeout en ${method.name}`)), 10000)
+      // 🔹 Fallback 1 — Bochilteam Scraper
+      const yt = await youtubedl(v).catch(async _ => await youtubedlv2(v))
+      const dl_url = await yt.audio["128kbps"].download()
+      const ttl = await yt.title
+
+      await conn.sendMessage(
+        m.chat,
+        {
+          audio: { url: dl_url },
+          mimetype: "audio/mpeg",
+          fileName: `${ttl}.mp3`
+        },
+        { quoted: m }
+      )
+    } catch {
+      try {
+        // 🔹 Fallback 2 — ytdl-core directo
+        let info = await ytdl.getInfo(v)
+        let format = ytdl.chooseFormat(info.formats, { filter: "audioonly" })
+        await conn.sendMessage(
+          m.chat,
+          { audio: { url: format.url }, mimetype: "audio/mpeg" },
+          { quoted: m }
         )
-      ])
-      console.log(`✅ Éxito con: ${method.name}`)
-      return result
-    } catch (error) {
-      console.warn(`❌ Falló ${method.name}:`, error.message)
-      // Continuar al siguiente método
+      } catch (e) {
+        m.reply(`⚠️ Error final: ${e.message}`)
+      }
     }
   }
-  
-  throw new Error("Todos los métodos de descarga fallaron")
 }
 
-// 🔹 Sanka Vollerei mejorado
-async function getFromSanka(youtubeUrl, title) {
-  const endpoint = `https://www.sankavollerei.com/download/ytmp3?apikey=planaai&url=${encodeURIComponent(youtubeUrl)}`
-  
-  const response = await fetch(endpoint)
-  if (!response.ok) throw new Error(`HTTP ${response.status}`)
-  
-  const data = await response.json()
-  
-  // Validación robusta de la respuesta
-  if (!data?.status || !data?.result?.download) {
-    throw new Error("Respuesta inválida del servicio")
+handler.command = ["play"]
+handler.exp = 0
+export default handler
+
+async function search(query, options = {}) {
+  const search = await yts.search({ query, hl: "es", gl: "ES", ...options })
+  return search.videos
+}
+
+function sanitizeFilename(name = "audio") {
+  return String(name).replace(/[\\/:*?"<>|]/g, "").slice(0, 200)
+}
+
+// 🔹 Función para usar Sanka Vollerei
+async function getFromSanka(youtubeUrl) {
+  const endpoint = `https://www.sankavollerei.com/download/ytmp3?apikey=planaai&url=${encodeURIComponent(
+    youtubeUrl
+  )}`
+  const res = await fetch(endpoint)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+  const json = await res.json().catch(() => null)
+  if (!json?.status || !json?.result?.download) {
+    throw new Error("Respuesta inválida de Sanka Vollerei")
   }
-  
+
   return {
-    url: data.result.download,
-    filename: `${sanitizeFilename(data.result.title || title)}.mp3`,
-    title: data.result.title,
-    thumbnail: data.result.thumbnail
+    download: json.result.download,
+    title: json.result.title,
+    duration: json.result.duration,
+    thumbnail: json.result.thumbnail
   }
-}
-
-// 🔹 Bochilteam mejorado
-async function getFromBochilteam(url, title) {
-  const yt = await ytdl(url)
-  const downloadUrl = await yt.audio["128kbps"].download()
+}  const downloadUrl = await yt.audio["128kbps"].download()
   
   return {
     url: downloadUrl,
