@@ -20,27 +20,12 @@ ${usedPrefix + command} nombre del video o artista`
 
     const v = video.url // URL del video para fallback
 
-    await m.react("✅")
-
     // 🔹 DESCARGA PRINCIPAL CON SANKA VOLLEREI
     const sanka = await getFromSanka(v)
     const fileName = `${sanitizeFilename(sanka.title || video.title)}.mp3`
     const audioUrl = sanka.download
 
-    // 🔹 PRIMERO: Enviar miniatura como imagen sin caption
-    await conn.sendMessage(
-      m.chat,
-      {
-        image: { url: sanka.thumbnail || video.thumbnail }
-        // SIN CAPTION - esto evita que se agrupe
-      },
-      { quoted: m }
-    )
-
-    // 🔹 Pausa más larga
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // 🔹 SEGUNDO: Enviar audio por separado con contexto diferente
+    // 🔹 Enviar solo el audio
     await conn.sendMessage(
       m.chat,
       {
@@ -50,16 +35,19 @@ ${usedPrefix + command} nombre del video o artista`
         contextInfo: {
           externalAdReply: {
             title: sanka.title || video.title,
-            body: "🎵 Audio listo • Haz clic para más",
+            body: "Descargado con Sanka Vollerei",
             thumbnailUrl: sanka.thumbnail || video.thumbnail,
             mediaType: 1,
-            renderLargerThumbnail: false,
+            renderLargerThumbnail: true,
             sourceUrl: v
           }
         }
-      }
-      // SIN quoted: m - esto hace que no se relacione con el mensaje anterior
+      },
+      { quoted: m }
     )
+    
+    // 🔹 Reacción de visto SOLO cuando ya se envió el audio
+    await m.react("✅")
 
   } catch (err) {
     console.log("❌ Error en descarga principal Sanka:", err)
@@ -69,41 +57,50 @@ ${usedPrefix + command} nombre del video o artista`
       const dl_url = await yt.audio["128kbps"].download()
       const ttl = await yt.title
 
-      // Miniatura sin caption
-      await conn.sendMessage(
-        m.chat,
-        {
-          image: { url: yt.thumbnail }
-        },
-        { quoted: m }
-      )
-
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // Audio separado
       await conn.sendMessage(
         m.chat,
         {
           audio: { url: dl_url },
           mimetype: "audio/mpeg",
           fileName: `${ttl}.mp3`
-        }
+        },
+        { quoted: m }
       )
+      
+      await m.react("✅")
+      
     } catch {
       try {
         // 🔹 Fallback 2 — ytdl-core directo
         let info = await ytdl.getInfo(v)
         let format = ytdl.chooseFormat(info.formats, { filter: "audioonly" })
-        
-        // Miniatura sin caption
         await conn.sendMessage(
           m.chat,
-          {
-            image: { url: info.videoDetails.thumbnails[0].url }
-          },
+          { audio: { url: format.url }, mimetype: "audio/mpeg" },
           { quoted: m }
         )
+        
+        await m.react("✅")
+        
+      } catch (e) {
+        await m.react("❌")
+        m.reply(`⚠️ Error final: ${e.message}`)
+      }
+    }
+  }
+}
 
+handler.command = ["play"]
+handler.exp = 0
+export default handler
+
+async function search(query, options = {}) {
+  const search = await yts.search({ query, hl: "es", gl: "ES", ...options })
+  return search.videos
+}
+
+function sanitizeFilename(name = "audio") {
+  return String(name).replace(/[\\/:
         await new Promise(resolve => setTimeout(resolve, 1000))
 
         // Audio separado
