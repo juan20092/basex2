@@ -147,25 +147,3 @@ async function getFromSanka(youtubeUrl) {
     thumbnail: json.result.thumbnail
   }
 }
-await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
-
-} catch (error) {
-console.error("Error:", error);
-await conn.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
-
-const errorMsg = typeof error === 'string' ? error :   
-  `❌ *Error:* ${error.message || 'Ocurrió un problema'}\n\n` +  
-  `🔸 *Posibles soluciones:*\n` +  
-  `• Verifica el nombre de la canción\n` +  
-  `• Intenta con otro tema\n` +  
-  `• Prueba más tarde`;  
-    
-await conn.sendMessage(m.chat, { text: errorMsg }, { quoted: m });
-
-}
-};
-
-handler.command = ['play', 'playaudio', 'ytmusic'];
-handler.exp = 0;
-export default handler;
-
