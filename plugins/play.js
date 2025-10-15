@@ -18,42 +18,36 @@ ${usedPrefix + command} nombre del video o artista`
     const video = yt_play[0]
     if (!video) throw "No se encontró ningún video con ese término."
 
-    const v = video.url // 🔹 URL del video para fallback
+    const v = video.url // URL del video para fallback
 
     await m.react("✅")
 
-    // 🔹 DESCARGA PRINCIPAL CON SYLPHY API
-    const api = await (
-      await fetch(`https://api.sylphy.xyz/download/ytmp3?url=${v}&apikey=sylphy-e321`)
-    ).json()
+    // 🔹 DESCARGA PRINCIPAL CON SANKA VOLLEREI
+    const sanka = await getFromSanka(v)
+    const fileName = `${sanitizeFilename(sanka.title || video.title)}.mp3`
+    const audioUrl = sanka.download
 
-    if (api?.res?.url) {
-      // 🔸 Enviar audio con miniatura
-      await conn.sendMessage(
-        m.chat,
-        {
-          audio: { url: api.res.url },
-          mimetype: "audio/mpeg",
-          fileName: `${sanitizeFilename(video.title)}.mp3`,
-          contextInfo: {
-            externalAdReply: {
-              title: video.title,
-              body: "Descargado con Sylphy API",
-              thumbnailUrl: video.thumbnail,
-              mediaType: 1,
-              renderLargerThumbnail: true,
-              sourceUrl: video.url
-            }
+    await conn.sendMessage(
+      m.chat,
+      {
+        audio: { url: audioUrl },
+        mimetype: "audio/mpeg",
+        fileName,
+        contextInfo: {
+          externalAdReply: {
+            title: sanka.title || video.title,
+            body: "Descargado con Sanka Vollerei",
+            thumbnailUrl: sanka.thumbnail || video.thumbnail,
+            mediaType: 1,
+            renderLargerThumbnail: true,
+            sourceUrl: v
           }
-        },
-        { quoted: m }
-      )
-      return
-    }
-
-    throw "No se obtuvo URL de descarga de Sylphy API."
+        }
+      },
+      { quoted: m }
+    )
   } catch (err) {
-    console.log("❌ Error en descarga principal:", err)
+    console.log("❌ Error en descarga principal Sanka:", err)
     try {
       // 🔹 Fallback 1 — Bochilteam Scraper
       const yt = await youtubedl(v).catch(async _ => await youtubedlv2(v))
@@ -97,4 +91,25 @@ async function search(query, options = {}) {
 
 function sanitizeFilename(name = "audio") {
   return String(name).replace(/[\\/:*?"<>|]/g, "").slice(0, 200)
+}
+
+// 🔹 Función para usar Sanka Vollerei
+async function getFromSanka(youtubeUrl) {
+  const endpoint = `https://www.sankavollerei.com/download/ytmp3?apikey=planaai&url=${encodeURIComponent(
+    youtubeUrl
+  )}`
+  const res = await fetch(endpoint)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+  const json = await res.json().catch(() => null)
+  if (!json?.status || !json?.result?.download) {
+    throw new Error("Respuesta inválida de Sanka Vollerei")
+  }
+
+  return {
+    download: json.result.download,
+    title: json.result.title,
+    duration: json.result.duration,
+    thumbnail: json.result.thumbnail
+  }
 }
