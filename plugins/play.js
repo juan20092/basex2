@@ -2,13 +2,10 @@ import fetch from "node-fetch"
 import yts from "yt-search"
 import ytdl from "ytdl-core"
 import { youtubedl, youtubedlv2 } from "@bochilteam/scraper"
-import { createRequire } from "module"
-const require = createRequire(import.meta.url)
-const { ytmp3 } = require("@hiudyy/ytdl") // API funcional
 
 let handler = async (m, { conn, command, args, text, usedPrefix }) => {
   if (!text)
-    throw `¿𝙌𝙪𝙚 𝙘𝙖𝙣𝙘𝙞𝙤́𝙣 𝙙𝙚𝙨𝙘𝙖𝙧𝙜𝙤?
+    throw `¿Qué canción quieres descargar?
 
 Uso:
 ${usedPrefix + command} nombre del video o artista`
@@ -21,33 +18,40 @@ ${usedPrefix + command} nombre del video o artista`
     const video = yt_play[0]
     if (!video) throw "No se encontró ningún video con ese término."
 
-    const v = video.url // URL del video para fallbacks
+    const v = video.url // 🔹 URL del video para fallback
 
     await m.react("✅")
 
-    // 🔹 DESCARGA PRINCIPAL CON API @hiudyy/ytdl
-    const result = await ytmp3(v)
-    const fileName = `${sanitizeFilename(video.title)}.mp3`
+    // 🔹 DESCARGA PRINCIPAL CON SYLPHY API
+    const api = await (
+      await fetch(`https://api.sylphy.xyz/download/ytmp3?url=${v}&apikey=sylphy-e321`)
+    ).json()
 
-    await conn.sendMessage(
-      m.chat,
-      {
-        audio: { url: result },
-        mimetype: "audio/mpeg",
-        fileName,
-        contextInfo: {
-          externalAdReply: {
-            title: video.title,
-            body: "Descargado con API @hiudyy/ytdl",
-            thumbnailUrl: video.thumbnail,
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: video.url
+    if (api?.res?.url) {
+      // 🔸 Enviar audio con miniatura
+      await conn.sendMessage(
+        m.chat,
+        {
+          audio: { url: api.res.url },
+          mimetype: "audio/mpeg",
+          fileName: `${sanitizeFilename(video.title)}.mp3`,
+          contextInfo: {
+            externalAdReply: {
+              title: video.title,
+              body: "Descargado con Sylphy API",
+              thumbnailUrl: video.thumbnail,
+              mediaType: 1,
+              renderLargerThumbnail: true,
+              sourceUrl: video.url
+            }
           }
-        }
-      },
-      { quoted: m }
-    )
+        },
+        { quoted: m }
+      )
+      return
+    }
+
+    throw "No se obtuvo URL de descarga de Sylphy API."
   } catch (err) {
     console.log("❌ Error en descarga principal:", err)
     try {
