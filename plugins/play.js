@@ -36,7 +36,7 @@ const getAudioUrl = async (videoUrl) => {
     try {
       console.log(`Probando API: ${api.name}`);
       const apiUrl = api.url(videoUrl);
-      const response = await fetch(apiUrl, { timeout: 8000 }); // Timeout aumentado a 8 segundos
+      const response = await fetch(apiUrl, { timeout: 8000 });
       
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       
@@ -50,7 +50,7 @@ const getAudioUrl = async (videoUrl) => {
     } catch (error) {
       console.error(`Error con API ${api.name}:`, error.message);
       lastError = error;
-      continue; // Intentar con la siguiente API
+      continue;
     }
   }
   
@@ -80,22 +80,6 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
       throw "❌ El audio es muy largo (máximo 10 minutos)";
     }
 
-    // Enviar información del video (mismo diseño)
-    await conn.sendMessage(m.chat, {
-      text: `01:27 ━━━━━⬤────── 05:48\n*⇄ㅤ      ◁        ❚❚        ▷        ↻*\n╴𝗘𝗹𝗶𝘁𝗲 𝗕𝗼𝘁 𝗚𝗹𝗼𝗯𝗮𝗹`,
-      contextInfo: {
-        externalAdReply: {
-          title: video.title.slice(0, 60),
-          body: "",
-          thumbnailUrl: video.thumbnail,
-          mediaType: 1,
-          renderLargerThumbnail: true,
-          showAdAttribution: true,
-          sourceUrl: video.url
-        }
-      }
-    }, { quoted: m });
-
     // Obtener audio (con reintentos usando Sanka primero)
     let audioUrl;
     try {
@@ -105,12 +89,23 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
       throw "⚠️ Error al procesar el audio. Intenta con otra canción";
     }
 
-    // Enviar audio optimizado con nombre sanitizado
+    // Enviar audio CON miniatura
     await conn.sendMessage(m.chat, {
       audio: { url: audioUrl },
       mimetype: "audio/mpeg",
       fileName: `${sanitizeFilename(video.title)}.mp3`,
-      ptt: false
+      ptt: false,
+      contextInfo: {
+        externalAdReply: {
+          title: video.title.slice(0, 60),
+          body: "🎵 Elite Bot Global",
+          thumbnailUrl: video.thumbnail,
+          mediaType: 1,
+          renderLargerThumbnail: true,
+          showAdAttribution: true,
+          sourceUrl: video.url
+        }
+      }
     }, { quoted: m });
 
     await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
