@@ -29,7 +29,6 @@
   },
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    
     "@whiskeysockets/baileys": "github:EdderBot02/bail",
     "@bochilteam/scraper": "^5.0.1",
     "@brandond/findthelyrics": "^2.0.5",
@@ -73,6 +72,7 @@
     "pino": "^7.8.0",
     "performance-now": "^2.1.0",
     "qrcode": "^1.5.0",
+    "qrcode-terminal": "^0.12.0",
     "similarity": "^1.2.1",
     "socket.io": "^4.4.1",
     "fuzzysort": "^1.0.0",
