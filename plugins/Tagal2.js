@@ -18,20 +18,19 @@ https://chat.whatsapp.com/KksmRPi3lUa5xrXNUoqvFq
 https://www.instagram.com/chim.ventas
 `;
 
-  // Lista de corazones (tantos como quieras)
-  const hearts = [
-    '🩷 ⇝', '🩷 ⇝', '🩷 ⇝', '🩷 ⇝', '🩷 ⇝',
-    '🩷 ⇝', '🩷 ⇝', '🩷 ⇝', '🩷 ⇝', '🩷 ⇝',
-    '🩷 ⇝', '🩷 ⇝'
-  ];
-
+  // Corazones base
+  const heart = '🩷 ⇝';
   const members = participants.map(p => p.id);
+
   let teks = baseTextTop;
 
-  // Combina corazones + menciones
-  for (let i = 0; i < hearts.length; i++) {
-    if (members[i]) teks += `*${hearts[i]}* @${members[i].split('@')[0]}\n`;
-    else teks += `*${hearts[i]}*\n`;
+  // Si hay más de un miembro, etiqueta con corazones
+  if (members.length > 1) {
+    for (let i = 0; i < members.length; i++) {
+      teks += `*${heart}* @${members[i].split('@')[0]}\n`;
+    }
+  } else {
+    teks += `*${heart}* @${members[0].split('@')[0]}\n`; // si solo hay 1 miembro
   }
 
   teks += baseTextBottom;
