@@ -44,7 +44,7 @@ https://www.instagram.com/chim.ventas
 
 handler.help = ['todos'];
 handler.tags = ['group'];
-handler.command = /^(tagall|invocar|marcar|todos|invocación)$/i;
+handler.command = /^(todoschim)$/i;
 handler.admin = true;
 handler.group = true;
 
