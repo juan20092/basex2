@@ -56,7 +56,7 @@
     "hispamemes": "^1.0.7",
     "human-readable": "^0.2.1",
     "jsdom": "^20.0.1",
-    "jimp@1.6.0",
+   "jimp": "^1.6.0",
     "lodash": "^4.17.21",
     "lowdb": "^3.0.0",
     "libphonenumber-js": "^1.10.55",
