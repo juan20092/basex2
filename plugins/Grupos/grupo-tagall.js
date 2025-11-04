@@ -1,16 +1,28 @@
-const handler = async (m, { isOwner, isAdmin, conn, args, participants }) => {
+const handler = async (m, { isOwner, conn, args, participants }) => {
   let chat = global.db.data.chats[m.chat],
       emoji = chat.emojiTag || '┃';
 
-  if (!(isAdmin || isOwner)) {
-    global.dfail('admin', m, conn);
-    throw false;
+  // ✅ Verificación real de administrador
+  if (m.isGroup) {
+    const groupMetadata = await conn.groupMetadata(m.chat)
+    const participants = groupMetadata.participants
+    const adminList = participants
+      .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
+      .map(p => p.id)
+    const isAdminReal = adminList.includes(m.sender)
+
+    if (!(isAdminReal || isOwner)) {
+      global.dfail('admin', m, conn)
+      throw false
+    }
   }
 
-  const pesan = args.join` `,
-        groupMetadata = await conn.groupMetadata(m.chat),
-        groupName = groupMetadata.subject;
+  // 📝 Mensaje personalizado y datos del grupo
+  const pesan = args.join` `
+  const groupMetadata = await conn.groupMetadata(m.chat)
+  const groupName = groupMetadata.subject
 
+  // 🌍 Banderas por prefijo de país
   const countryFlags = {
     '1': '🇺🇸','7': '🇷🇺','20': '🇪🇬','27': '🇿🇦','30': '🇬🇷','31': '🇳🇱','32': '🇧🇪','33': '🇫🇷',
     '34': '🇪🇸','36': '🇭🇺','39': '🇮🇹','40': '🇷🇴','41': '🇨🇭','43': '🇦🇹','44': '🇬🇧','45': '🇩🇰',
@@ -38,36 +50,38 @@ const handler = async (m, { isOwner, isAdmin, conn, args, participants }) => {
     '962': '🇯🇴','963': '🇸🇾','964': '🇮🇶','965': '🇰🇼','966': '🇸🇦','967': '🇾🇪','968': '🇴🇲','970': '🇵🇸',
     '971': '🇦🇪','972': '🇮🇱','973': '🇧🇭','974': '🇶🇦','975': '🇧🇹','976': '🇲🇳','977': '🇳🇵','992': '🇹🇯',
     '993': '🇹🇲','994': '🇦🇿','995': '🇬🇪','996': '🇰🇬','998': '🇺🇿'
-  };
-
-  const getCountryFlag = (jid) => {
-    const phoneNumber = jid.split('@')[0].replace(/^0+/, '');
-    const possiblePrefixes = Object.keys(countryFlags).sort((a, b) => b.length - a.length);
-    for (let prefix of possiblePrefixes) {
-      if (phoneNumber.startsWith(prefix)) return countryFlags[prefix];
-    }
-    return '🏳️';
-  };
-
-  let teks = `*╭━* 𝘼𝘾𝙏𝙄𝙑𝙀𝙉𝙎𝙀𝙉 乂\n\n*${groupName}*\n👤 𝙄𝙉𝙏𝙀𝙂𝙍𝘼𝙉𝙏𝙀𝙎: *${participants.length}*\n${pesan}\n`;
-
-  for (const mem of participants) {
-    let jidReal = mem.jid ? mem.jid : mem.id;
-    teks += `${emoji} ${getCountryFlag(jidReal)} @${jidReal.split('@')[0]}\n`;
   }
 
-  teks += `\n*╰━* 𝙀𝙇𝙄𝙏𝙀 𝘽𝙊𝙏 𝙂𝙇𝙊𝘽𝘼𝙇\n▌│█║▌║▌║║▌║▌║▌║█`;
+  const getCountryFlag = (jid) => {
+    const phoneNumber = jid.split('@')[0].replace(/^0+/, '')
+    const possiblePrefixes = Object.keys(countryFlags).sort((a, b) => b.length - a.length)
+    for (let prefix of possiblePrefixes) {
+      if (phoneNumber.startsWith(prefix)) return countryFlags[prefix]
+    }
+    return '🏳️'
+  }
 
+  // 💬 Construcción del mensaje
+  let teks = `*╭━* 𝘼𝘾𝙏𝙄𝙑𝙀𝙉𝙎𝙀𝙉 乂\n\n*${groupName}*\n👤 𝙄𝙉𝙏𝙀𝙂𝙍𝘼𝙉𝙏𝙀𝙎: *${participants.length}*\n${pesan}\n`
+
+  for (const mem of participants) {
+    let jidReal = mem.jid ? mem.jid : mem.id
+    teks += `${emoji} ${getCountryFlag(jidReal)} @${jidReal.split('@')[0]}\n`
+  }
+
+  teks += `\n*╰━* 𝙀𝙇𝙄𝙏𝙀 𝘽𝙊𝙏 𝙂𝙇𝙊𝘽𝘼𝙇\n▌│█║▌║▌║║▌║▌║▌║█`
+
+  // 🚀 Enviar mensaje con menciones
   await conn.sendMessage(m.chat, {
     text: teks,
-    mentions: participants.map((a) => (a.jid ? a.jid : a.id))
-  });
-};
+    mentions: participants.map(a => (a.jid ? a.jid : a.id))
+  })
+}
 
-handler.help = ['todos'];
-handler.tags = ['group'];
-handler.command = /^(tagall|invocar|marcar|todos|invocación)$/i;
-handler.admin = true;
-handler.group = true;
+handler.help = ['todos']
+handler.tags = ['group']
+handler.command = /^(tagall|invocar|marcar|todos|invocación)$/i
+handler.admin = true
+handler.group = true
 
-export default handler;
+export default handler
