@@ -1,33 +1,28 @@
-import fs from 'fs'
+let handler = async (m, { conn, text }) => {
+  if (!m.isGroup) return m.reply('*❗Este comando solo puede usarse en grupos.*')
 
-let handler = async (m, { conn, text, participants, command }) => {
-  // Obtener metadatos del grupo
-  const groupMetadata = m.isGroup ? await conn.groupMetadata(m.chat) : {}
-  const groupAdmins = groupMetadata.participants
-    .filter(p => p.admin)
-    .map(p => p.id)
+  // Obtener metadata del grupo
+  let groupMetadata = await conn.groupMetadata(m.chat)
+  let participants = groupMetadata.participants
+  let admins = participants.filter(p => p.admin).map(p => p.id)
 
-  // Comprobar si el usuario es admin o el bot es admin
-  const isBotAdmin = groupAdmins.includes(conn.user.jid)
-  const isUserAdmin = groupAdmins.includes(m.sender)
+  // Verificar si el usuario es admin
+  const isUserAdmin = admins.includes(m.sender)
+  const isBotAdmin = admins.includes(conn.user.jid)
 
-  if (!m.isGroup) return m.reply('❗ Este comando solo puede usarse en grupos.')
-  if (!isUserAdmin) return m.reply('👮 Este comando solo puede usarlo un *administrador* del grupo.')
+  if (!isUserAdmin) return m.reply('*👮 Solo los administradores pueden usar este comando.*')
+  if (!isBotAdmin) return m.reply('*🤖 Necesito ser administrador para mencionar a todos.*')
 
-  // Crear el mensaje mencionando a todos
   let mensaje = text ? text : '👋 ¡Atención a todos!'
   let mencionados = participants.map(u => u.id)
+  let texto = `${mensaje}\n\n${mencionados.map(v => `@${v.split('@')[0]}`).join(' ')}`
 
-  conn.sendMessage(m.chat, {
-    text: `${mensaje}\n\n${mencionados.map(v => `@${v.split('@')[0]}`).join(' ')}`,
-    mentions: mencionados
-  }, { quoted: m })
+  await conn.sendMessage(m.chat, { text: texto, mentions: mencionados }, { quoted: m })
 }
 
-handler.help = ['todos']
+handler.help = ['n', 'todos']
 handler.tags = ['grupo']
-handler.command = /^(todos|tagall|invocar)$/i
-handler.admin = true
+handler.command = /^(n|todos|tagall|invocar)$/i
 handler.group = true
 
 export default handler
