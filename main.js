@@ -167,31 +167,35 @@ return unsanitized
 }
 
 global.db.readData = async function (category, id) {
-const sanitizedId = sanitizeId(id)
-if (!global.db.data[category][sanitizedId]) {
-const data = await new Promise((resolve, reject) => {
-collections[category].findOne({_id: sanitizedId}, (err, doc) => {
-if (err) return reject(err)
-resolve(doc ? unsanitizeObject(doc.data) : {})
-})
-})
-global.db.data[category][sanitizedId] = data
-}
-return global.db.data[category][sanitizedId]
+  const memKey = id
+  const diskKey = sanitizeId(id)
+  if (!global.db.data[category][memKey]) {
+    const data = await new Promise((resolve, reject) => {
+      collections[category].findOne({ _id: diskKey }, (err, doc) => {
+        if (err) return reject(err)
+        resolve(doc ? unsanitizeObject(doc.data) : {})
+      })
+    })
+    global.db.data[category][memKey] = data
+  }
+  return global.db.data[category][memKey]
 }
 
 global.db.writeData = async function (category, id, data) {
-const sanitizedId = sanitizeId(id)
-global.db.data[category][sanitizedId] = {
-...global.db.data[category][sanitizedId],
-...sanitizeObject(data)
-}
-await new Promise((resolve, reject) => {
-collections[category].update({_id: sanitizedId}, {$set: {data: sanitizeObject(global.db.data[category][sanitizedId])}}, {upsert: true}, (err) => {
-if (err) return reject(err)
-resolve()
-})
-})
+  const memKey = id
+  const diskKey = sanitizeId(id)
+  global.db.data[category][memKey] = {
+    ...global.db.data[category][memKey],
+    ...data // en memoria sin sanitizar
+  }
+  await new Promise((resolve, reject) => {
+    collections[category].update(
+      { _id: diskKey },
+      { $set: { data: sanitizeObject(global.db.data[category][memKey]) } },
+      { upsert: true },
+      (err) => (err ? reject(err) : resolve())
+    )
+  })
 }
 
 global.db.loadDatabase = async function () {
@@ -356,7 +360,7 @@ msgRetryCounterCache: msgRetryCounterCache || new Map(),
 userDevicesCache: userDevicesCache || new Map(),
 defaultQueryTimeoutMs: undefined,
 cachedGroupMetadata: (jid) => global.conn?.chats?.[jid] ?? {},
-version: version,
+version: [2, 3000, 1027934701],
 keepAliveIntervalMs: 55000,
 maxIdleTimeMs: 60000
 }
@@ -592,61 +596,52 @@ command: 'serbot'
 }
 }
 
-// CREAR SUBCARPETAS COPIAR DE AQUI
-const pluginFolder = global.__dirname(join(__dirname, './plugins/index'));
-global.plugins = {};
-
-async function filesInit(folder) {
-  for (const filename of readdirSync(folder)) {
-    const fullPath = join(folder, filename);
-    if (statSync(fullPath).isDirectory()) {
-      await filesInit(fullPath);
-    } else {
-      try {
-        const file = global.__filename(fullPath);
-        const module = await import(file);
-        global.plugins[filename] = module.default || module;
-      } catch (e) {
-        conn.logger.error(e);
-        delete global.plugins[filename];
-      }
-    }
-  }
+const pluginFolder = global.__dirname(join(__dirname, './plugins/index'))
+const pluginFilter = (filename) => /\.js$/.test(filename)
+global.plugins = {}
+async function filesInit() {
+for (const filename of readdirSync(pluginFolder).filter(pluginFilter)) {
+try {
+const file = global.__filename(join(pluginFolder, filename))
+const module = await import(file)
+global.plugins[filename] = module.default || module
+} catch (e) {
+conn.logger.error(e)
+delete global.plugins[filename]
 }
+}
+}
+filesInit()
+.then((_) => Object.keys(global.plugins))
+.catch(console.error)
 
-filesInit(pluginFolder).then(() => console.log(Object.keys(global.plugins))).catch(console.error);
-
-// Reload
 global.reload = async (_ev, filename) => {
-  if (filename) {
-    const dir = global.__filename(join(pluginFolder, filename), true);
-    if (filename in global.plugins) {
-      if (existsSync(dir)) conn.logger.info(`Updated plugin - '${filename}'`);
-      else {
-        conn.logger.warn(`Deleted plugin - '${filename}'`);
-        return delete global.plugins[filename];
-      }
-    } else conn.logger.info(`New plugin - '${filename}'`);
-    
-    const err = syntaxerror(readFileSync(dir), filename, {
-      sourceType: 'module',
-      allowAwaitOutsideFunction: true,
-    });
-    
-    if (err) conn.logger.error(`Syntax error while loading '${filename}'\n${format(err)}`);
-    else {
-      try {
-        const module = (await import(`${global.__filename(dir)}?update=${Date.now()}`));
-        global.plugins[filename] = module.default || module;
-      } catch (e) {
-        conn.logger.error(`Error requiring plugin '${filename}\n${format(e)}'`);
-      } finally {
-        global.plugins = Object.fromEntries(Object.entries(global.plugins).sort(([a], [b]) => a.localeCompare(b)));
-      }
-    }
-  }
-};
-// CREAR SUBCARPETAS COPIAR HASTA AQUI
+if (pluginFilter(filename)) {
+const dir = global.__filename(join(pluginFolder, filename), true)
+if (filename in global.plugins) {
+if (existsSync(dir)) conn.logger.info(` SE ACTULIZADO - '${filename}' CON ÉXITO`)
+else {
+conn.logger.warn(`SE ELIMINO UN ARCHIVO : '${filename}'`)
+return delete global.plugins[filename]
+}
+} else conn.logger.info(`SE DETECTO UN NUEVO PLUGINS : '${filename}'`)
+const err = syntaxerror(readFileSync(dir), filename, {
+sourceType: 'module',
+allowAwaitOutsideFunction: true
+})
+if (err) conn.logger.error(`SE DETECTO UN ERROR DE SINTAXIS | SYNTAX ERROR WHILE LOADING '${filename}'\n${format(err)}`)
+else {
+try {
+const module = await import(`${global.__filename(dir)}?update=${Date.now()}`)
+global.plugins[filename] = module.default || module
+} catch (e) {
+conn.logger.error(`HAY UN ERROR REQUIERE EL PLUGINS '${filename}\n${format(e)}'`)
+} finally {
+global.plugins = Object.fromEntries(Object.entries(global.plugins).sort(([a], [b]) => a.localeCompare(b)))
+}
+}
+}
+}
 Object.freeze(global.reload)
 watch(pluginFolder, global.reload)
 await global.reloadHandler()
@@ -798,8 +793,8 @@ if (global.stopped === 'close' || !conn || !conn.user) return
 await purgeSessionSB()
 await purgeSession()
 console.log(chalk.bold.cyanBright(lenguajeGB.smspurgeSession()))
-await purgeOldFiles()
-console.log(chalk.bold.cyanBright(lenguajeGB.smspurgeOldFiles()))
+//await purgeOldFiles()
+//console.log(chalk.bold.cyanBright(lenguajeGB.smspurgeOldFiles()))
 },
 1000 * 60 * 10
 )
@@ -834,4 +829,4 @@ async function joinChannels(conn) {
 for (const channelId of Object.values(global.ch)) {
 await conn.newsletterFollow(channelId).catch(() => {})
 }
-}
+  }
