@@ -62,7 +62,7 @@ const handler = async (m, { isOwner, isAdmin, conn, args, participants }) => {
 
   // 🇪🇨 Ecuador primero
   if (grouped['593']) {
-    teks += `\n🇪🇨 *ECUADOR*\n`;
+    teks += ``;
     for (const jid of grouped['593']) {
       teks += `${emoji} 🇪🇨 @${jid.split('@')[0]}\n`;
     }
