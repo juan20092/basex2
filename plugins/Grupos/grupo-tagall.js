@@ -40,34 +40,55 @@ const handler = async (m, { isOwner, isAdmin, conn, args, participants }) => {
     '993': '🇹🇲','994': '🇦🇿','995': '🇬🇪','996': '🇰🇬','998': '🇺🇿'
   };
 
-  const getCountryFlag = (jid) => {
-    const phoneNumber = jid.split('@')[0].replace(/^0+/, '');
-    const possiblePrefixes = Object.keys(countryFlags).sort((a, b) => b.length - a.length);
-    for (let prefix of possiblePrefixes) {
-      if (phoneNumber.startsWith(prefix)) return countryFlags[prefix];
+  const getCountryPrefix = (jid) => {
+    const phone = jid.split('@')[0].replace(/^0+/, '');
+    const prefixes = Object.keys(countryFlags).sort((a, b) => b.length - a.length);
+    for (let p of prefixes) {
+      if (phone.startsWith(p)) return p;
     }
-    return '🏳️';
+    return 'other';
   };
 
   let teks = `*╭━* 𝘼𝘾𝙏𝙄𝙑𝙀𝙉𝙎𝙀𝙉 乂\n\n*${groupName}*\n👤 𝙄𝙉𝙏𝙀𝙂𝙍𝘼𝙉𝙏𝙀𝙎: *${participants.length}*\n${pesan}\n`;
 
+  let grouped = {};
+
   for (const mem of participants) {
-    let jidReal = mem.jid ? mem.jid : mem.id;
-    teks += `${emoji} ${getCountryFlag(jidReal)} @${jidReal.split('@')[0]}\n`;
+    let jid = mem.jid || mem.id;
+    let prefix = getCountryPrefix(jid);
+    if (!grouped[prefix]) grouped[prefix] = [];
+    grouped[prefix].push(jid);
+  }
+
+  // 🇪🇨 Ecuador primero
+  if (grouped['593']) {
+    teks += `\n🇪🇨 *ECUADOR*\n`;
+    for (const jid of grouped['593']) {
+      teks += `${emoji} 🇪🇨 @${jid.split('@')[0]}\n`;
+    }
+    delete grouped['593'];
+  }
+
+  // 🌍 Resto de países
+  for (const prefix of Object.keys(grouped)) {
+    teks += `\n${countryFlags[prefix] || '🏳️'} *+${prefix}*\n`;
+    for (const jid of grouped[prefix]) {
+      teks += `${emoji} ${countryFlags[prefix] || '🏳️'} @${jid.split('@')[0]}\n`;
+    }
   }
 
   teks += `\n*╰━* 𝙀𝙇𝙄𝙏𝙀 𝘽𝙊𝙏 𝙂𝙇𝙊𝘽𝘼𝙇\n▌│█║▌║▌║║▌║▌║▌║█`;
 
   await conn.sendMessage(m.chat, {
     text: teks,
-    mentions: participants.map((a) => (a.jid ? a.jid : a.id))
+    mentions: participants.map(p => p.jid || p.id)
   });
 };
 
 handler.help = ['todos'];
 handler.tags = ['group'];
 handler.command = /^(tagall|invocar|marcar|todos|invocación)$/i;
-handler.admin = false;
+handler.admin = true;
 handler.group = true;
 
 export default handler;
