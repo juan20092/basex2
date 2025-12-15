@@ -60,18 +60,16 @@ const handler = async (m, { isOwner, isAdmin, conn, args, participants }) => {
     grouped[prefix].push(jid);
   }
 
-  // 🇪🇨 Ecuador primero
+  // 🇪🇨 Ecuador primero (sin encabezado)
   if (grouped['593']) {
-    teks += ``;
     for (const jid of grouped['593']) {
       teks += `${emoji} 🇪🇨 @${jid.split('@')[0]}\n`;
     }
     delete grouped['593'];
   }
 
-  // 🌍 Resto de países
+  // 🌍 Resto de países (sin encabezado)
   for (const prefix of Object.keys(grouped)) {
-    teks += `\n${countryFlags[prefix] || '🏳️'} *+${prefix}*\n`;
     for (const jid of grouped[prefix]) {
       teks += `${emoji} ${countryFlags[prefix] || '🏳️'} @${jid.split('@')[0]}\n`;
     }
