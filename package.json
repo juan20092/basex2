@@ -29,7 +29,7 @@
   },
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    "@whiskeysockets/baileys": "github:gatanina-li/baileys",
+     "@whiskeysockets/baileys": "github:gatanina-li/baileys",
     "@bochilteam/scraper": "^5.0.1",
     "@brandond/findthelyrics": "^2.0.5",
     "@green-code/music-track-data": "^2.0.3",
@@ -56,6 +56,7 @@
     "hispamemes": "^1.0.7",
     "human-readable": "^0.2.1",
     "jsdom": "^20.0.1",
+   
     "lodash": "^4.17.21",
     "lowdb": "^3.0.0",
     "libphonenumber-js": "^1.10.55",
@@ -92,8 +93,4 @@
     "eslint-config-google": "^0.14.0",
     "prettier": "^3.6.2"
   }
-}},
-"devDependencies": {
-"eslint": "^8.45.0",
-"eslint-config-google": "^0.14.0"
-}}
+}
