@@ -98,7 +98,7 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
           { quoted: m }
         )
       } catch (e) {
-        m.reply(`⚠️ Error final: ${e.message}`)
+        m.reply(`⚠️ Comando en desarrollo`)
       }
     }
   }
