@@ -90,8 +90,8 @@ return
 }
 
 await conn.sendMessage(m.chat, {
-text: `01:27 ━━━━━⬤──── 05:48
-*⇄ㅤ   ◁   ㅤ  ❚❚ㅤ     ▷ㅤ   ↻*
+text: `01:27 ━━━━━━━━⬤─────── 05:48
+*⇄ㅤ     ◁     ㅤ  ❚❚ㅤ       ▷ㅤ     ↻*
 𝙀𝙡𝙞𝙩𝙚 𝘽𝙤𝙩 𝙂𝙡𝙤𝙗𝙖𝙡`, 
 contextInfo: {
 externalAdReply: {
@@ -105,7 +105,7 @@ renderLargerThumbnail: true
 
 if (command == 'play') {	
 try {
-await m.react('💯')
+await m.react('✅')
 // Usar API funcional del segundo código
 const apiUrl = `https://api-adonix.ultraplus.click/download/ytaudio?apikey=Adofreekey&url=${encodeURIComponent(yt_play[0].url)}`
 const apiResp = await fetchJson(apiUrl, HTTP_TIMEOUT_MS)
