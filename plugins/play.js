@@ -63,13 +63,10 @@ function parseDurationToSeconds(d) {
 
 let handler = async (m, { conn, command, args, text, usedPrefix }) => {
 let q, v, yt, dl_url, ttl, size, lolhuman, lolh, n, n2, n3, n4, cap, qu, currentQuality   
-if (!text) throw `⭐ 𝘐𝘯𝘨𝘳𝘦𝘴𝘢 𝘦𝘭 𝘵𝘪́𝘵𝘶𝘭𝘰 𝘥𝘦 𝘭𝘢 𝘤𝘢𝘯𝘤𝘪𝘰́𝘯 𝘲𝘶𝘦 𝘥𝘦𝘴𝘦𝘢𝘴 𝘥𝘦𝘴𝘤𝘢𝘳𝘨𝘢𝘳.
-
-» 𝘌𝘫𝘦𝘮𝘱𝘭𝘰:
-${usedPrefix + command} Cypher - Rich vagos `
+if (!text) throw `✦ ¡Hey! Parece que olvidaste ingresar el nombre de la música de YouTube.\n💫 Ejemplo:\n\n> .play Blessd mirame`
 
 try {
-await m.react('⚡')
+await m.react('🕓')
 const yt_play = await search(args.join(" "))
 let additionalText = ''
 if (command === 'play') {
@@ -92,6 +89,7 @@ return
 await conn.sendMessage(m.chat, {
 text: `01:27 ━━━━━━━━⬤─────── 05:48
 *⇄ㅤ     ◁     ㅤ  ❚❚ㅤ       ▷ㅤ     ↻*
+
 𝙀𝙡𝙞𝙩𝙚 𝘽𝙤𝙩 𝙂𝙡𝙤𝙗𝙖𝙡`, 
 contextInfo: {
 externalAdReply: {
