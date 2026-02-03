@@ -1,14 +1,12 @@
 import { fileTypeFromBuffer } from 'file-type'
 
 const handler = async (m, { conn, command, isOwner }) => {
-  if (!isOwner) {
-    return m.reply('❌ Solo el *owner* puede cambiar la foto del bot.')
-  }
+  if (!isOwner) return m.reply('❌ Solo el owner puede usar este comando.')
 
   const q = m.quoted || m
   const mime = (q.msg || q).mimetype || ''
 
-  if (!mime || !/image\/(jpe?g|png)/.test(mime)) {
+  if (!/image\/(jpe?g|png)/.test(mime)) {
     return m.reply(`📸 Responde a una imagen con *.${command}*`)
   }
 
@@ -17,15 +15,16 @@ const handler = async (m, { conn, command, isOwner }) => {
       react: { text: '🕓', key: m.key }
     })
 
-    const media = await q.download()
-    if (!media) throw '❌ No se pudo descargar la imagen'
+    const img = await q.download()
+    if (!img) throw 'No se pudo descargar la imagen'
 
-    const { mime: realMime } = await fileTypeFromBuffer(media) || { mime }
+    // 🔑 JID REAL DEL BOT (NO del grupo)
+    const botJid = conn.user.id.split(':')[0] + '@s.whatsapp.net'
 
-    await conn.updateProfilePicture(conn.user.id, media)
+    await conn.updateProfilePicture(botJid, img)
 
     await conn.sendMessage(m.chat, {
-      text: '✅ Foto de perfil del bot actualizada correctamente.'
+      text: '✅ Foto de perfil del BOT actualizada correctamente.'
     }, { quoted: m })
 
     await conn.sendMessage(m.chat, {
@@ -34,13 +33,13 @@ const handler = async (m, { conn, command, isOwner }) => {
 
   } catch (e) {
     console.error(e)
-    m.reply('❌ Error al cambiar la foto de perfil del bot.')
+    m.reply('❌ Error al cambiar la foto del bot.')
   }
 }
 
-handler.help = ['setpp']
+handler.help = ['setppbot']
 handler.tags = ['owner']
-handler.command = ['setpp', 'setprofile']
+handler.command = ['setppbot']
 handler.owner = true
 
 export default handler
