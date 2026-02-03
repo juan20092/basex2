@@ -3,12 +3,71 @@ import yts from "yt-search"
 import ytdl from 'ytdl-core'
 import axios from 'axios'
 import { youtubedl, youtubedlv2 } from '@bochilteam/scraper'
+
+const HTTP_TIMEOUT_MS = 90 * 1000
+const MAX_SECONDS = 90 * 60
+
+// Funciones auxiliares del segundo código
+async function fetchJson(url, timeoutMs = HTTP_TIMEOUT_MS) {
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      signal: ctrl.signal,
+      headers: { accept: 'application/json', 'user-agent': 'Mozilla/5.0' }
+    })
+    const text = await res.text().catch(() => '')
+    let data = null
+    try {
+      data = text ? JSON.parse(text) : null
+    } catch {
+      data = null
+    }
+    if (!res.ok) {
+      const msg = data?.message || data?.error || text || `HTTP ${res.status}`
+      throw new Error(`HTTP ${res.status}: ${String(msg).slice(0, 400)}`)
+    }
+    if (data == null) throw new Error('Respuesta JSON inválida')
+    return data
+  } finally {
+    clearTimeout(t)
+  }
+}
+
+async function fetchBuffer(url, timeoutMs = HTTP_TIMEOUT_MS) {
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, headers: { 'user-agent': 'Mozilla/5.0' } })
+    if (!res.ok) throw new Error(`No se pudo bajar el audio (HTTP ${res.status})`)
+    const ab = await res.arrayBuffer()
+    return Buffer.from(ab)
+  } finally {
+    clearTimeout(t)
+  }
+}
+
+function parseDurationToSeconds(d) {
+  if (d == null) return null
+  if (typeof d === 'number' && Number.isFinite(d)) return Math.max(0, Math.floor(d))
+  const s = String(d).trim()
+  if (!s) return null
+  if (/^\d+$/.test(s)) return Math.max(0, parseInt(s, 10))
+  const parts = s.split(':').map((x) => x.trim()).filter(Boolean)
+  if (!parts.length || parts.some((p) => !/^\d+$/.test(p))) return null
+  let sec = 0
+  for (const p of parts) sec = sec * 60 + parseInt(p, 10)
+  return Number.isFinite(sec) ? sec : null
+}
+
 let handler = async (m, { conn, command, args, text, usedPrefix }) => {
 let q, v, yt, dl_url, ttl, size, lolhuman, lolh, n, n2, n3, n4, cap, qu, currentQuality   
 if (!text) throw `⭐ 𝘐𝘯𝘨𝘳𝘦𝘴𝘢 𝘦𝘭 𝘵𝘪́𝘵𝘶𝘭𝘰 𝘥𝘦 𝘭𝘢 𝘤𝘢𝘯𝘤𝘪𝘰́𝘯 𝘥𝘦 𝘚𝘱𝘰𝘵𝘪𝘧𝘺 𝘲𝘶𝘦 𝘥𝘦𝘴𝘦𝘢𝘴 𝘥𝘦𝘴𝘤𝘢𝘳𝘨𝘢𝘳.
 
 » 𝘌𝘫𝘦𝘮𝘱𝘭𝘰:
 ${usedPrefix + command} Cypher - Rich vagos `
+
 try {
 await m.react('⚡')
 const yt_play = await search(args.join(" "))
@@ -17,6 +76,19 @@ if (command === 'spotify') {
 additionalText = ''
 } else if (command === 'play8') {
 additionalText = 'video 🎥'}
+
+// Verificar duración máxima
+const durSec = parseDurationToSeconds(yt_play[0]?.duration?.seconds) ?? 
+                parseDurationToSeconds(yt_play[0]?.seconds) ?? 
+                parseDurationToSeconds(yt_play[0]?.duration) ?? 
+                parseDurationToSeconds(yt_play[0]?.timestamp)
+
+if (durSec && durSec > MAX_SECONDS) {
+await conn.sendMessage(m.chat, { text: `⭐ Audio muy largo.\n> Máximo permitido: ${Math.floor(MAX_SECONDS / 60)} minutos.` }, { quoted: m })
+await m.react('❌')
+return
+}
+
 await conn.sendMessage(m.chat, {
 text: `*⌈📀 SPOTIFY PREMIUM 📀⌋*
 01:27 ━━━━━⬤──── 05:48
@@ -31,78 +103,116 @@ mediaType: 1,
 showAdAttribution: true,
 renderLargerThumbnail: true
 }}} , { quoted: m })
+
 if (command == 'spotify') {	
 try {
 await m.react('💯')
-let q = '128kbps'
-let v = yt_play[0].url
-const yt = await youtubedl(v).catch(async _ => await youtubedlv2(v))
-const dl_url = await yt.audio[q].download()
-const ttl = await yt.title
-const size = await yt.audio[q].fileSizeH
-await conn.sendMessage(m.chat, { audio: { url: dl_url }, mimetype: 'audio/mpeg' }, { quoted: m})
+// Usar API funcional del segundo código
+const apiUrl = `https://api-adonix.ultraplus.click/download/ytaudio?apikey=Adofreekey&url=${encodeURIComponent(yt_play[0].url)}`
+const apiResp = await fetchJson(apiUrl, HTTP_TIMEOUT_MS)
+
+if (!apiResp?.status || !apiResp?.data?.url) {
+throw new Error('La API no devolvió un link válido')
+}
+
+const directUrl = String(apiResp.data.url)
+const audioBuffer = await fetchBuffer(directUrl, HTTP_TIMEOUT_MS)
+
+await conn.sendMessage(m.chat, { 
+audio: audioBuffer, 
+mimetype: 'audio/mpeg',
+fileName: `${yt_play[0].title}.mp3`
+}, { quoted: m })
+
 } catch {
 try {
-const dataRE = await fetch(`https://api.akuari.my.id/downloader/youtube?link=${yt_play[0].url}`)
-const dataRET = await dataRE.json()
-await conn.sendMessage(m.chat, { audio: { url: dataRET.mp3[1].url }, mimetype: 'audio/mpeg' }, { quoted: m})
+// Segundo intento con API alternativa del segundo código (comentada)
+const apiUrl2 = `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(yt_play[0].url)}`
+const res2 = await fetch(apiUrl2)
+const json2 = await res2.json()
+
+if (json2?.status && json2?.result) {
+await conn.sendMessage(m.chat, { 
+audio: { url: json2.result }, 
+mimetype: 'audio/mpeg' 
+}, { quoted: m })
+} else {
+throw new Error('API alternativa falló')
+}
 } catch {
 try {
-let humanLol = await fetch(`https://api.lolhuman.xyz/api/ytplay?apikey=${lolkeysapi}&query=${yt_play[0].title}`)
-let humanRET = await humanLol.json()
-await conn.sendMessage(m.chat, { audio: { url: humanRET.result.audio.link}, mimetype: 'audio/mpeg' }, { quoted: m})
-} catch {     
-try {
-let lolhuman = await fetch(`https://api.lolhuman.xyz/api/ytaudio2?apikey=${lolkeysapi}&url=${yt_play[0].url}`)    
-let lolh = await lolhuman.json()
-let n = lolh.result.title || 'error'
-await conn.sendMessage(m.chat, { audio: { url: lolh.result.link}, mimetype: 'audio/mpeg' }, { quoted: m})
-} catch {   
-try {
+// Tercer intento con ytdl-core (último recurso)
 let searchh = await yts(yt_play[0].url)
 let __res = searchh.all.map(v => v).filter(v => v.type == "video")
 let infoo = await ytdl.getInfo('https://youtu.be/' + __res[0].videoId)
 let ress = await ytdl.chooseFormat(infoo.formats, { filter: 'audioonly' })
-await conn.sendMessage(m.chat, { audio: { url: ress.url}, mimetype: 'audio/mpeg' }, { quoted: m})
-/*conn.sendMessage(m.chat, { audio: { url: ress.url }, mimetype: 'audio/mpeg', contextInfo: {
-externalAdReply: {
-title: __res[0].title,
-body: "",
-thumbnailUrl: yt_play[0].thumbnail, 
-mediaType: 1,
-showAdAttribution: true,
-renderLargerThumbnail: true
-}}} , { quoted: m })*/
+await conn.sendMessage(m.chat, { audio: { url: ress.url }, mimetype: 'audio/mpeg' }, { quoted: m })
 } catch {
-}}}}}
+await conn.sendMessage(m.chat, { text: '❌ Error: No se pudo descargar el audio con ningún método disponible.' }, { quoted: m })
+await m.react('❌')
+}}}
 }  
+
 if (command == 'play8') {
 try {
 await m.react('✅')
-let qu = '480'
-let q = qu + 'p'
-let v = yt_play[0].url
-const yt = await youtubedl(v).catch(async _ => await youtubedlv2(v))
-const dl_url = await yt.video[q].download()
-const ttl = await yt.title
-const size = await yt.video[q].fileSizeH
-await await conn.sendMessage(m.chat, { video: { url: dl_url }, fileName: `${ttl}.mp4`, mimetype: 'video/mp4', caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] `, thumbnail: await fetch(yt.thumbnail) }, { quoted: m })
+// Usar API para video (misma base)
+const apiUrl = `https://api-adonix.ultraplus.click/download/ytvideo?apikey=Adofreekey&url=${encodeURIComponent(yt_play[0].url)}`
+const apiResp = await fetchJson(apiUrl, HTTP_TIMEOUT_MS)
+
+if (apiResp?.status && apiResp?.data?.url) {
+await conn.sendMessage(m.chat, { 
+video: { url: apiResp.data.url }, 
+fileName: `${yt_play[0].title}.mp4`, 
+mimetype: 'video/mp4', 
+caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] `, 
+thumbnail: await fetch(yt_play[0].thumbnail) 
+}, { quoted: m })
+} else {
+throw new Error('API de video no funcionó')
+}
 } catch {   
 try {  
-let mediaa = await ytMp4(yt_play[0].url)
-await conn.sendMessage(m.chat, { video: { url: mediaa.result }, fileName: `error.mp4`, caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] `, thumbnail: mediaa.thumb, mimetype: 'video/mp4' }, { quoted: m })     
+// Intentar con API alternativa de video
+const apiUrl2 = `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(yt_play[0].url)}`
+const res2 = await fetch(apiUrl2)
+const json2 = await res2.json()
+
+if (json2?.status && json2?.result) {
+await conn.sendMessage(m.chat, { 
+video: { url: json2.result }, 
+fileName: `${yt_play[0].title}.mp4`, 
+caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] `, 
+thumbnail: { url: yt_play[0].thumbnail }, 
+mimetype: 'video/mp4' 
+}, { quoted: m })     
+} else {
+throw new Error('API alternativa de video falló')
+}
 } catch {  
 try {
-let lolhuman = await fetch(`https://api.lolhuman.xyz/api/ytvideo2?apikey=${lolkeysapi}&url=${yt_play[0].url}`)    
-let lolh = await lolhuman.json()
-let n = lolh.result.title || 'error'
-let n2 = lolh.result.link
-let n3 = lolh.result.size
-let n4 = lolh.result.thumbnail
-await conn.sendMessage(m.chat, { video: { url: n2 }, fileName: `${n}.mp4`, mimetype: 'video/mp4', caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] `, thumbnail: await fetch(n4) }, { quoted: m })
+// Último recurso: ytdl-core para video
+let searchh = await yts(yt_play[0].url)
+let __res = searchh.all.map(v => v).filter(v => v.type == "video")
+let infoo = await ytdl.getInfo('https://youtu.be/' + __res[0].videoId)
+let format = ytdl.chooseFormat(infoo.formats, { quality: '18' }) // 360p
+await conn.sendMessage(m.chat, { 
+video: { url: format.url }, 
+fileName: `${yt_play[0].title}.mp4`, 
+mimetype: 'video/mp4', 
+caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘻 𝘾𝙊𝙉 𝙐𝙇𝙏𝙄𝙈𝙊 𝙍𝙀𝘾𝙐𝙍𝙎𝙊 [✅] `, 
+thumbnail: await fetch(yt_play[0].thumbnail) 
+}, { quoted: m })
 } catch {
-}}}}} catch {
-}}
+await conn.sendMessage(m.chat, { text: '❌ Error: No se pudo descargar el video con ningún método disponible.' }, { quoted: m })
+await m.react('❌')
+}}}}
+} catch (error) {
+console.error(error)
+await conn.sendMessage(m.chat, { text: `❌ Error general: ${error.message}` }, { quoted: m })
+await m.react('❌')
+}
+}
 handler.command = ['spotify', 'play8']
 handler.exp = 0
 export default handler
@@ -137,57 +247,3 @@ if (bytes === 0) return 'n/a';
 const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)), 10);
 if (i === 0) resolve(`${bytes} ${sizes[i]}`);
 resolve(`${(bytes / (1024 ** i)).toFixed(1)} ${sizes[i]}`)})};
-
-async function ytMp3(url) {
-return new Promise((resolve, reject) => {
-ytdl.getInfo(url).then(async(getUrl) => {
-let result = [];
-for(let i = 0; i < getUrl.formats.length; i++) {
-let item = getUrl.formats[i];
-if (item.mimeType == 'audio/webm; codecs=\"opus\"') {
-let { contentLength } = item;
-let bytes = await bytesToSize(contentLength);
-result[i] = { audio: item.url, size: bytes }}};
-let resultFix = result.filter(x => x.audio != undefined && x.size != undefined) 
-let tiny = await axios.get(`https://tinyurl.com/api-create.php?url=${resultFix[0].audio}`);
-let tinyUrl = tiny.data;
-let title = getUrl.videoDetails.title;
-let thumb = getUrl.player_response.microformat.playerMicroformatRenderer.thumbnail.thumbnails[0].url;
-resolve({ title, result: tinyUrl, result2: resultFix, thumb })}).catch(reject)})};
-
-async function ytMp4(url) {
-return new Promise(async(resolve, reject) => {
-ytdl.getInfo(url).then(async(getUrl) => {
-let result = [];
-for(let i = 0; i < getUrl.formats.length; i++) {
-let item = getUrl.formats[i];
-if (item.container == 'mp4' && item.hasVideo == true && item.hasAudio == true) {
-let { qualityLabel, contentLength } = item;
-let bytes = await bytesToSize(contentLength);
-result[i] = { video: item.url, quality: qualityLabel, size: bytes }}};
-let resultFix = result.filter(x => x.video != undefined && x.size != undefined && x.quality != undefined) 
-let tiny = await axios.get(`https://tinyurl.com/api-create.php?url=${resultFix[0].video}`);
-let tinyUrl = tiny.data;
-let title = getUrl.videoDetails.title;
-let thumb = getUrl.player_response.microformat.playerMicroformatRenderer.thumbnail.thumbnails[0].url;
-resolve({ title, result: tinyUrl, rersult2: resultFix[0].video, thumb })}).catch(reject)})};
-
-async function ytPlay(query) {
-return new Promise((resolve, reject) => {
-yts(query).then(async(getData) => {
-let result = getData.videos.slice( 0, 5 );
-let url = [];
-for (let i = 0; i < result.length; i++) { url.push(result[i].url) }
-let random = url[0];
-let getAudio = await ytMp3(random);
-resolve(getAudio)}).catch(reject)})};
-
-async function ytPlayVid(query) {
-return new Promise((resolve, reject) => {
-yts(query).then(async(getData) => {
-let result = getData.videos.slice( 0, 5 );
-let url = [];
-for (let i = 0; i < result.length; i++) { url.push(result[i].url) }
-let random = url[0];
-let getVideo = await ytMp4(random);
-resolve(getVideo)}).catch(reject)})};
