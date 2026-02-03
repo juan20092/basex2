@@ -1,93 +1,89 @@
-const handler = async (m, { conn, text, isOwner }) => {
-  if (!isOwner) {
-    return m.reply('❌ Este comando es solo para el *creador del bot*.')
+let handler = async (m, { conn, text, isOwner }) => {
+  if (!isOwner) return m.reply('❌ Solo el creador puede usar este comando')
+  if (!text) return m.reply('⚠️ Escribe el mensaje del comunicado')
+
+  let mensaje = `📢 *COMUNICADO GENERAL*\n\n${text}`
+
+  let stats = []
+  let totalEnviados = 0
+  let totalGrupos = 0
+
+  // ======================
+  // BOT PRINCIPAL
+  // ======================
+  let gruposBot = Object.entries(conn.chats)
+    .filter(([id, chat]) => id.endsWith('@g.us'))
+
+  let enviadosBot = 0
+  for (let [id] of gruposBot) {
+    try {
+      await conn.sendMessage(id, { text: mensaje })
+      enviadosBot++
+      totalEnviados++
+    } catch {}
   }
 
-  if (!text) {
-    return m.reply('📢 Uso correcto:\n\n.comunicar <mensaje>')
-  }
+  totalGrupos += gruposBot.length
 
-  // 📊 Contadores
-  let botTotal = 0
-  let botOk = 0
+  stats.push(
+    `🤖 *Bot principal*\n` +
+    `• Grupos: ${gruposBot.length}\n` +
+    `• Enviados: ${enviadosBot}\n` +
+    `• Efectividad: ${((enviadosBot / gruposBot.length) * 100 || 0).toFixed(1)}%`
+  )
 
-  let subTotal = 0
-  let subOk = 0
+  // ======================
+  // SUBBOTS
+  // ======================
+  let subbots = global.conns?.filter(sb => sb.user && sb.ws.readyState === 1) || []
 
-  // 📌 función para enviar a grupos de una conexión
-  const enviarAGrupos = async (conexion, tipo = 'bot') => {
-    const chats = conexion.chats || {}
+  let index = 1
+  for (let sb of subbots) {
+    let gruposSub = Object.entries(sb.chats)
+      .filter(([id]) => id.endsWith('@g.us'))
 
-    const grupos = Object.keys(chats)
-      .filter(jid => jid.endsWith('@g.us'))
-
-    for (const jid of grupos) {
+    let enviadosSub = 0
+    for (let [id] of gruposSub) {
       try {
-        await conexion.sendMessage(jid, { text })
-
-        if (tipo === 'bot') botOk++
-        else subOk++
-      } catch (e) {
-        // error silencioso
-      }
+        await sb.sendMessage(id, { text: mensaje })
+        enviadosSub++
+        totalEnviados++
+      } catch {}
     }
 
-    if (tipo === 'bot') botTotal = grupos.length
-    else subTotal += grupos.length
+    totalGrupos += gruposSub.length
+
+    stats.push(
+      `🧩 *Subbot ${index}*\n` +
+      `• Grupos: ${gruposSub.length}\n` +
+      `• Enviados: ${enviadosSub}\n` +
+      `• Efectividad: ${((enviadosSub / gruposSub.length) * 100 || 0).toFixed(1)}%`
+    )
+
+    index++
   }
 
-  // 🟢 BOT PRINCIPAL
-  await enviarAGrupos(conn, 'bot')
+  // ======================
+  // REPORTE FINAL
+  // ======================
+  let reporte =
+`✅ *COMUNICADO ENVIADO*
 
-  // 🟣 SUBBOTS
-  if (global.conns && Array.isArray(global.conns)) {
-    for (const subbot of global.conns) {
-      try {
-        await enviarAGrupos(subbot, 'sub')
-      } catch (e) {
-        // ignora subbot caído
-      }
-    }
-  }
+📊 *ESTADÍSTICAS GENERALES*
+• Subbots activos: ${subbots.length}
+• Total de grupos: ${totalGrupos}
+• Total enviados: ${totalEnviados}
+• Efectividad total: ${((totalEnviados / totalGrupos) * 100 || 0).toFixed(1)}%
 
-  // 📊 Cálculos
-  const botPorcentaje = botTotal
-    ? Math.round((botOk / botTotal) * 100)
-    : 0
+━━━━━━━━━━━━━━
+${stats.join('\n\n')}
+━━━━━━━━━━━━━━`
 
-  const subPorcentaje = subTotal
-    ? Math.round((subOk / subTotal) * 100)
-    : 0
-
-  const totalGrupos = botTotal + subTotal
-  const totalOk = botOk + subOk
-  const totalPorcentaje = totalGrupos
-    ? Math.round((totalOk / totalGrupos) * 100)
-    : 0
-
-  // 📣 REPORTE FINAL
-  const reporte =
-`📢 *COMUNICADO GENERAL ENVIADO*
-
-🟢 *Bot principal*
-• Grupos: ${botOk}/${botTotal}
-• Efectividad: ${botPorcentaje}%
-
-🟣 *Subbots*
-• Grupos: ${subOk}/${subTotal}
-• Efectividad: ${subPorcentaje}%
-
-📊 *TOTAL GENERAL*
-• Grupos: ${totalOk}/${totalGrupos}
-• Efectividad: ${totalPorcentaje}%
-`
-
-  m.reply(reporte)
+  await m.reply(reporte)
 }
 
-handler.help = ['comunicar <mensaje>']
-handler.tags = ['owner']
 handler.command = ['comunicar']
 handler.owner = true
+handler.group = false
 
 export default handler
