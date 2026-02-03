@@ -22,10 +22,14 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
     let audioData = null
     
     try {
-      // Intentar tus APIs funcionales
-      audioData = await getAudioFromYourAPIs(v, video.title)
+      // Intentar tus APIs funcionales (las que funcionan)
+      audioData = await getAudioFromAPIs(v, video.title)
+      
+      if (audioData.url) {
+        m.reply(`> ❀ *Audio procesado. Servidor:* \`${audioData.api}\``)
+      }
     } catch (apiError) {
-      console.log("❌ Error en APIs funcionales:", apiError.message)
+      console.log("❌ Error en APIs:", apiError.message)
       
       // 🔹 Fallback 1 — Bochilteam Scraper
       try {
@@ -39,7 +43,8 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
           title: ttl,
           duration: video?.timestamp || 'N/A',
           thumbnail: thumb,
-          isDirect: false
+          isDirect: false,
+          api: "Bochilteam Scraper"
         }
       } catch {
         // 🔹 Fallback 2 — ytdl-core directo
@@ -52,7 +57,8 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
           title: info.videoDetails.title,
           duration: `${info.videoDetails.lengthSeconds} segundos`,
           thumbnail: thumb,
-          isDirect: true
+          isDirect: true,
+          api: "ytdl-core"
         }
       }
     }
@@ -71,7 +77,7 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
         contextInfo: {
           externalAdReply: {
             title: audioData.title,
-            body: `Duración: ${audioData.duration}`,
+            body: `Duración: ${audioData.duration}\nServidor: ${audioData.api}`,
             thumbnailUrl: audioData.thumbnail || video.thumbnail,
             mediaType: 1,
             renderLargerThumbnail: true
@@ -80,6 +86,8 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
       },
       { quoted: m }
     )
+
+    await m.react("✔️")
 
   } catch (err) {
     console.error("❌ Error general:", err)
@@ -103,176 +111,102 @@ function sanitizeFilename(name = "audio") {
   return String(name).replace(/[\\/:*?"<>|]/g, "").slice(0, 200)
 }
 
-// 🔹 FUNCIÓN CON TUS APIs FUNCIONALES (INTEGRADAS)
-async function getAudioFromYourAPIs(youtubeUrl, videoTitle) {
-  // Extraer ID del video para algunas APIs
-  const videoId = youtubeUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([a-zA-Z0-9_-]{11})/)?.[1] || ''
-  
-  // 🔹 LISTA DE TUS APIs FUNCIONALES (del segundo código)
+// 🔹 FUNCIÓN CON TUS APIs FUNCIONALES (exactamente como en tu código)
+async function getAudioFromAPIs(url, title) {
+  // 🔹 LISTA DE TUS APIs QUE SÍ FUNCIONAN
   const apis = [
-    // API 1: Dorratz API
     {
-      name: "Dorratz",
-      url: `https://api.dorratz.com/v3/ytdl?url=${encodeURIComponent(youtubeUrl)}`,
-      parser: async (data) => {
-        const mp3 = data.medias?.find(media => 
-          (media.quality === "160kbps" || media.quality === "128kbps") && 
-          media.extension === "mp3"
-        )
-        return mp3 ? {
-          url: mp3.url,
-          title: videoTitle,
-          duration: mp3.duration || 'N/A',
-          thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-          isDirect: false
-        } : null
-      }
+      api: 'ZenzzXD',
+      endpoint: `https://zenzapis.xyz/downloader/ytmp3?url=${encodeURIComponent(url)}&apikey=YOUR_API_KEY`,
+      extractor: res => res.data?.download_url || res.result?.download_url
     },
-    
-    // API 2: Neoxr API
     {
-      name: "Neoxr",
-      url: `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(youtubeUrl)}&type=audio&quality=128kbps&apikey=GataDios`,
-      parser: (data) => {
-        if (data.data?.url) {
-          return {
-            url: data.data.url,
-            title: videoTitle,
-            duration: 'N/A',
-            thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-            isDirect: false
-          }
-        }
-        return null
-      }
+      api: 'ZenzzXD v2',
+      endpoint: `https://zenzapis.xyz/downloader/ytmp3v2?url=${encodeURIComponent(url)}&apikey=YOUR_API_KEY`,
+      extractor: res => res.data?.download_url || res.result?.download_url
     },
-    
-    // API 3: FGMods API
     {
-      name: "FGMods",
-      url: `https://api.fgmods.xyz/api/downloader/ytmp4?url=${encodeURIComponent(youtubeUrl)}&apikey=elrebelde21`,
-      parser: (data) => {
-        if (data.result?.dl_url) {
-          return {
-            url: data.result.dl_url,
-            title: videoTitle,
-            duration: 'N/A',
-            thumbnail: data.result.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-            isDirect: false
-          }
-        }
-        return null
-      }
+      api: 'Yupra',
+      endpoint: `https://api.yupra.org/api/downloader/ytmp3?url=${encodeURIComponent(url)}`,
+      extractor: res => res.result?.link || res.data?.link
     },
-    
-    // API 4: Siputzx API
     {
-      name: "Siputzx",
-      url: `https://api.siputzx.my.id/api/d/ytmp4?url=${encodeURIComponent(youtubeUrl)}`,
-      parser: (data) => {
-        if (data.dl) {
-          return {
-            url: data.dl,
-            title: videoTitle,
-            duration: 'N/A',
-            thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-            isDirect: false
-          }
-        }
-        return null
-      }
+      api: 'Vreden',
+      endpoint: `https://api.vredendjogja.com/api/v1/download/youtube/audio?url=${encodeURIComponent(url)}&quality=128`,
+      extractor: res => res.result?.download?.url || res.data?.download?.url
     },
-    
-    // API 5: Zenkey API
     {
-      name: "Zenkey",
-      url: `https://api.zenkey.my.id/api/download/ytmp3?apikey=zenkey&url=${encodeURIComponent(youtubeUrl)}`,
-      parser: (data) => {
-        if (data.result?.download?.url) {
-          return {
-            url: data.result.download.url,
-            title: videoTitle,
-            duration: data.result.duration || 'N/A',
-            thumbnail: data.result.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-            isDirect: false
-          }
-        }
-        return null
-      }
+      api: 'Vreden v2',
+      endpoint: `https://api.vredendjogja.com/api/v1/download/play/audio?query=${encodeURIComponent(title)}`,
+      extractor: res => res.result?.download?.url || res.data?.download?.url
     },
-    
-    // API 6: Exonity API (por título)
     {
-      name: "Exonity",
-      url: `https://exonity.tech/api/dl/playmp3?query=${encodeURIComponent(videoTitle)}`,
-      parser: (data) => {
-        if (data.result?.download) {
-          return {
-            url: data.result.download,
-            title: videoTitle,
-            duration: 'N/A',
-            thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-            isDirect: false
-          }
-        }
-        return null
-      }
+      api: 'Xyro',
+      endpoint: `https://api.xyro.io/download/youtubemp3?url=${encodeURIComponent(url)}`,
+      extractor: res => res.result?.download || res.data?.download
     }
   ]
 
-  // 🔹 Intentar cada API hasta que una funcione
-  for (let api of apis) {
+  // 🔹 Intentar cada API (exactamente como tu función fetchFromApis)
+  for (const { api, endpoint, extractor } of apis) {
     try {
-      console.log(`🔹 Intentando API: ${api.name}`)
+      console.log(`🔹 Probando API: ${api}`)
       
-      // Configurar timeout
+      // Configurar timeout de 10 segundos
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 10000)
       
-      const res = await fetch(api.url, {
+      // Hacer la petición
+      const response = await fetch(endpoint, { 
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Accept': 'application/json'
         },
-        signal: controller.signal
+        signal: controller.signal 
       })
       
       clearTimeout(timeout)
       
-      if (res.ok) {
-        const data = await res.json()
-        const result = await api.parser(data)
+      if (!response.ok) {
+        console.log(`❌ ${api}: HTTP ${response.status}`)
+        continue
+      }
+      
+      const data = await response.json()
+      const link = extractor(data)
+      
+      if (link && typeof link === 'string' && link.startsWith('http')) {
+        console.log(`✅ ${api}: Funcionó!`)
         
-        if (result && result.url) {
-          console.log(`✅ API ${api.name} funcionó correctamente`)
-          
-          // Verificar que el archivo sea accesible
-          try {
-            const headRes = await fetch(result.url, { method: 'HEAD', timeout: 5000 })
-            if (headRes.ok) {
-              return result
-            }
-          } catch (checkError) {
-            console.log(`⚠️ API ${api.name} devolvió URL no accesible`)
-            continue // Intentar siguiente API
+        // Verificar que el enlace sea accesible
+        const headResponse = await fetch(link, { method: 'HEAD', timeout: 5000 })
+        if (headResponse.ok) {
+          return {
+            url: link,
+            title: title,
+            api: api,
+            isDirect: false
           }
         }
+      } else {
+        console.log(`❌ ${api}: No devolvió enlace válido`)
       }
     } catch (error) {
-      console.log(`❌ API ${api.name} falló:`, error.message)
-      continue // Intentar siguiente API
+      console.log(`❌ ${api}: ${error.message}`)
     }
+    
+    // Esperar 500ms antes de intentar la siguiente API
+    await new Promise(resolve => setTimeout(resolve, 500))
   }
   
-  throw new Error("Todas las APIs funcionales fallaron")
+  throw new Error("Todas las APIs fallaron")
 }
 
-// 🔹 Función para obtener tamaño del archivo (opcional)
-async function getFileSize(url) {
-  try {
-    const res = await fetch(url, { method: 'HEAD', timeout: 5000 })
-    return parseInt(res.headers.get('content-length') || 0)
-  } catch {
-    return 0
-  }
+// 🔹 Función para formatear vistas (opcional, de tu código)
+function formatViews(views) {
+  if (views === undefined) return "No disponible"
+  if (views >= 1_000_000_000) return `${(views / 1_000_000_000).toFixed(1)}B (${views.toLocaleString()})`
+  if (views >= 1_000_000) return `${(views / 1_000_000).toFixed(1)}M (${views.toLocaleString()})`
+  if (views >= 1_000) return `${(views / 1_000).toFixed(1)}k (${views.toLocaleString()})`
+  return views.toString()
 }
