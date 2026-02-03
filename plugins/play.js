@@ -1,85 +1,108 @@
 import fetch from "node-fetch"
-import yts from "yt-search"
-import ytdl from "ytdl-core"
-import { youtubedl, youtubedlv2 } from "@bochilteam/scraper"
+import axios from 'axios'
 
-let handler = async (m, { conn, command, args, text, usedPrefix }) => {
-  if (!text) throw `🎵 *¿Qué canción quieres descargar?*\n\n📌 *Uso:*\n${usedPrefix + command} <nombre de la canción>\n\n📝 *Ejemplo:*\n${usedPrefix + command} bad bunny`
+let handler = async (m, { conn, args, text, usedPrefix }) => {
+  if (!text)
+    throw `🎵 *¿Qué canción de Spotify quieres descargar?*\n\n📌 *Uso:*\n${usedPrefix + command} <nombre de la canción>\n\n📝 *Ejemplo:*\n${usedPrefix + command} bad bunny un verano sin ti`
+
+  // Control de solicitudes simultáneas
+  if (global.userRequests && global.userRequests[m.sender]) {
+    return m.reply(`⏳ *Espera un momento*\nYa estás descargando una canción. Espera a que termine.`)
+  }
+  
+  global.userRequests = global.userRequests || {}
+  global.userRequests[m.sender] = true
 
   try {
-    // Reacción de espera
     await m.react("🕓")
 
-    // 🔍 Búsqueda en YouTube
-    const searchResults = await yts.search({ query: text, hl: "es", gl: "ES" })
-    if (!searchResults.videos.length) throw "❌ No se encontraron resultados para tu búsqueda."
+    // 🎯 BUSCAR EN SPOTIFY
+    const spotifyResults = await searchSpotify(text)
+    if (!spotifyResults || spotifyResults.length === 0) {
+      throw "❌ No se encontraron resultados en Spotify para tu búsqueda."
+    }
+
+    const track = spotifyResults[0]
     
-    const video = searchResults.videos[0]
-    const videoUrl = video.url
-    const videoTitle = video.title
-    const videoThumb = video.thumbnail
+    // 📋 INFORMACIÓN DE LA CANCIÓN
+    const infoMsg = `🎵 *INFORMACIÓN DE LA CANCIÓN*\n
+🎼 *Título:* ${track.name}
+🎤 *Artista(s):* ${track.artists.join(', ')}
+💿 *Álbum:* ${track.album}
+⏱️ *Duración:* ${track.duration}
+📅 *Publicado:* ${track.release_date || 'N/A'}
+👁️ *Popularidad:* ${track.popularity || 'N/A'}%
+🔗 *URL Spotify:* ${track.url}
 
-    // Información del video
-    const infoMsg = `🎬 *INFORMACIÓN DEL VIDEO*\n
-📌 *Título:* ${videoTitle}
-⏱️ *Duración:* ${video.timestamp || "Desconocido"}
-👁️ *Vistas:* ${video.views ? formatNumber(video.views) : "N/A"}
-👤 *Canal:* ${video.author?.name || "Desconocido"}
-📅 *Publicado:* ${video.ago || "N/A"}
-🔗 *URL:* ${videoUrl}
-
-⏳ *Descargando audio...*`
+⏳ *Descargando...*`
 
     // Enviar información con miniatura
     await conn.sendMessage(m.chat, {
-      image: { url: videoThumb },
+      image: { url: track.image },
       caption: infoMsg,
       contextInfo: {
         externalAdReply: {
-          title: "🎧 AlyaBot - Descargador MP3",
-          body: "Convirtiendo a audio...",
-          thumbnail: await (await fetch(videoThumb)).buffer(),
+          title: "🎧 Spotify Downloader",
+          body: "Convirtiendo a MP3...",
+          thumbnailUrl: track.image,
           mediaType: 1,
-          sourceUrl: videoUrl
+          sourceUrl: track.url
         }
       }
     }, { quoted: m })
 
     await m.react("✅")
 
-    // 🎯 INTENTO 1: APIs principales
-    let audioData = await getAudioFromWorkingAPIs(videoUrl, videoTitle)
+    // 🎯 DESCARGAR CANCIÓN CON APIS DE SPOTIFY
+    let audioData = null
     
-    // 🎯 INTENTO 2: Fallback si la API falla
-    if (!audioData) {
-      await m.reply("⚠️ *API principal falló, intentando método alternativo...*")
-      audioData = await getAudioFallback(videoUrl, videoTitle)
+    // Intento 1: API Siputzx (de tu código)
+    try {
+      console.log("🔹 Intentando API Siputzx...")
+      const res = await fetch(`https://api.siputzx.my.id/api/d/spotify?url=${encodeURIComponent(track.url)}`)
+      const data = await res.json()
+      
+      if (data?.data?.download) {
+        audioData = {
+          url: data.data.download,
+          api: "Siputzx API",
+          title: track.name,
+          artist: track.artists[0]
+        }
+      }
+    } catch (e) {
+      console.log("❌ Siputzx falló:", e.message)
     }
 
-    // 🎯 INTENTO 3: Último recurso (ytdl-core)
+    // Intento 2: Otras APIs de Spotify
     if (!audioData) {
-      await m.reply("🔄 *Usando método directo...*")
-      audioData = await getAudioYtdl(videoUrl)
+      audioData = await trySpotifyAPIs(track.url, track.name, track.artists[0])
+    }
+
+    // Intento 3: Buscar alternativa en YouTube
+    if (!audioData) {
+      await m.reply("⚠️ *API Spotify falló, buscando en YouTube...*")
+      audioData = await searchYouTubeAlternative(track.name + " " + track.artists[0])
     }
 
     if (!audioData || !audioData.url) {
-      throw "❌ No se pudo obtener el audio. Intenta con otro video."
+      throw "❌ No se pudo descargar la canción. Intenta con otro nombre."
     }
 
-    // 📤 Enviar el audio
-    await m.reply(`✅ *Audio descargado*\n📌 *Servidor:* ${audioData.api}\n📁 *Tamaño:* ${audioData.size || "Desconocido"}\n\n⏳ *Enviando...*`)
+    // 📤 ENVIAR AUDIO
+    await m.reply(`✅ *Canción descargada*\n📌 *Servidor:* ${audioData.api}\n🎤 *Artista:* ${audioData.artist}\n⏳ *Enviando...*`)
 
     await conn.sendMessage(m.chat, {
       audio: { url: audioData.url },
       mimetype: 'audio/mpeg',
-      fileName: `${cleanFileName(videoTitle)}.mp3`,
+      fileName: `${cleanFileName(track.name)} - ${cleanFileName(track.artists[0])}.mp3`,
       contextInfo: {
         externalAdReply: {
-          title: `🎧 ${videoTitle.substring(0, 60)}${videoTitle.length > 60 ? '...' : ''}`,
-          body: `Servidor: ${audioData.api}`,
-          thumbnail: await (await fetch(videoThumb)).buffer(),
+          title: `🎧 ${track.name.substring(0, 60)}${track.name.length > 60 ? '...' : ''}`,
+          body: `Artista: ${track.artists[0]}`,
+          thumbnailUrl: track.image,
           mediaType: 1,
-          sourceUrl: videoUrl
+          sourceUrl: track.url
         }
       }
     }, { quoted: m })
@@ -87,15 +110,20 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
     await m.react("🎧")
 
   } catch (error) {
-    console.error("Error en handler:", error)
+    console.error("Error:", error)
     await m.react("❌")
-    await m.reply(`❌ *Error:* ${error.message || error}\n\n⚠️ *Solución:*\n• Verifica tu conexión\n• Intenta con otro video\n• El video puede ser muy largo\n• O usa: ${usedPrefix}play2 para video`)
+    await m.reply(`❌ *Error:* ${error.message || error}\n\n⚠️ *Posibles soluciones:*\n• Verifica el nombre de la canción\n• Intenta con otro artista\n• La canción puede no estar disponible`)
+  } finally {
+    // Liberar usuario
+    if (global.userRequests) {
+      delete global.userRequests[m.sender]
+    }
   }
 }
 
-handler.help = ['play', 'musica', 'audio', 'ytmp3', 'song']
+handler.help = ['spotify', 'spotifydl', 'spotifymp3', 'music']
 handler.tags = ['downloader']
-handler.command = /^(play|musica|audio|ytmp3|song|descargarmusica)$/i
+handler.command = /^(spotify|spotifydl|spotifymp3|music|spotimusic)$/i
 handler.exp = 0
 handler.limit = true
 handler.premium = false
@@ -104,148 +132,185 @@ handler.register = true
 export default handler
 
 // ============================================
-// 🔧 FUNCIONES PRINCIPALES
+// 🎯 FUNCIONES PRINCIPALES PARA SPOTIFY
 // ============================================
 
 /**
- * 🎯 Obtener audio de APIs que SÍ funcionan
+ * 🔍 Buscar en Spotify
  */
-async function getAudioFromWorkingAPIs(url, title) {
-  const apis = [
-    // ✅ API 1: Akuari.my.id (MUY CONFIABLE)
-    {
-      name: "Akuari API",
-      url: `https://api.akuari.my.id/downloader/youtube?link=${encodeURIComponent(url)}`,
-      parser: async (data) => {
-        if (data.respon?.audio) {
-          return {
-            url: data.respon.audio,
-            api: "Akuari.my.id",
-            size: data.respon.size
-          }
-        }
-        return null
-      }
-    },
+async function searchSpotify(query) {
+  try {
+    // Obtener token de Spotify
+    const token = await getSpotifyToken()
     
-    // ✅ API 2: YouTube MP3 Converter
-    {
-      name: "YouTube MP3",
-      url: `https://yt1s.com/api/ajaxSearch/index`,
-      method: "POST",
-      body: new URLSearchParams({
-        q: url,
-        vt: "home"
-      }),
+    // Buscar tracks
+    const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=5`, {
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Spotify API error: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    
+    if (!data.tracks || !data.tracks.items.length) {
+      return []
+    }
+    
+    // Procesar resultados
+    return data.tracks.items.map(track => ({
+      id: track.id,
+      name: track.name,
+      artists: track.artists.map(artist => artist.name),
+      album: track.album.name,
+      duration: formatDuration(track.duration_ms),
+      url: track.external_urls.spotify,
+      image: track.album.images[0]?.url || '',
+      preview_url: track.preview_url,
+      popularity: track.popularity,
+      release_date: track.album.release_date
+    }))
+    
+  } catch (error) {
+    console.error("Error en searchSpotify:", error)
+    
+    // Fallback: Buscar con API pública
+    return await searchSpotifyPublic(query)
+  }
+}
+
+/**
+ * 🔑 Obtener token de Spotify
+ */
+async function getSpotifyToken() {
+  try {
+    // Credenciales públicas (puedes cambiarlas)
+    const clientId = '5c0986c5a6184288b2f4e5668e90c3a6'  // Ejemplo público
+    const clientSecret = '7f78b15b6bdd4fe3a5ad7d31e1895698' // Ejemplo público
+    
+    const response = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
       },
-      parser: async (data) => {
-        if (data.links && data.links.mp3) {
-          const mp3 = Object.values(data.links.mp3).pop()
-          if (mp3 && mp3.k) {
-            const dlRes = await fetch(`https://yt1s.com/api/ajaxConvert/convert`, {
-              method: "POST",
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: new URLSearchParams({
-                vid: data.vid,
-                k: mp3.k
-              })
-            })
-            const dlData = await dlRes.json()
-            return {
-              url: dlData.dlink,
-              api: "YT1S.com",
-              size: mp3.size
-            }
-          }
-        }
-        return null
+      body: 'grant_type=client_credentials'
+    })
+    
+    const data = await response.json()
+    return data.access_token
+    
+  } catch (error) {
+    console.error("Error obteniendo token Spotify:", error)
+    // Token de respaldo
+    return 'BQCl0mWCEjw_kbTmBw-Wj5Om4kP4r69F-9jKlOCwVlRj9dNR-N_VBUVf48D3eTOlOlnD8yV8BdMsqVH2zRx29MGDnW5U9IZ8UeIzFQN79XHEnTtJ7cY'
+  }
+}
+
+/**
+ * 🔄 Buscar en Spotify con API pública
+ */
+async function searchSpotifyPublic(query) {
+  try {
+    const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=5`, {
+      headers: {
+        'Authorization': 'Bearer BQCl0mWCEjw_kbTmBw-Wj5Om4kP4r69F-9jKlOCwVlRj9dNR-N_VBUVf48D3eTOlOlnD8yV8BdMsqVH2zRx29MGDnW5U9IZ8UeIzFQN79XHEnTtJ7cY'
       }
+    })
+    
+    const data = await response.json()
+    return data.tracks?.items.map(track => ({
+      name: track.name,
+      artists: track.artists.map(artist => artist.name),
+      album: track.album.name,
+      duration: formatDuration(track.duration_ms),
+      url: track.external_urls.spotify,
+      image: track.album.images[0]?.url || ''
+    })) || []
+    
+  } catch (error) {
+    console.error("Error en searchSpotifyPublic:", error)
+    return []
+  }
+}
+
+/**
+ * ⬇️ Intentar diferentes APIs para descargar de Spotify
+ */
+async function trySpotifyAPIs(spotifyUrl, title, artist) {
+  const apis = [
+    // API 1: Siputzx (funcional)
+    {
+      name: "Siputzx API",
+      url: `https://api.siputzx.my.id/api/d/spotify?url=${encodeURIComponent(spotifyUrl)}`,
+      parser: (data) => data?.data?.download || data?.download
     },
     
-    // ✅ API 3: ZenzAPI (sin key pública)
+    // API 2: SpotiDL API
     {
-      name: "ZenzAPI Pública",
-      url: `https://zenzapis.xyz/downloader/youtube?url=${encodeURIComponent(url)}&apikey=free`,
-      parser: (data) => {
-        if (data.result?.audio) {
-          return {
-            url: data.result.audio,
-            api: "ZenzAPI",
-            size: data.result.size
-          }
-        }
-        return null
-      }
+      name: "SpotiDL",
+      url: `https://spotidl.vercel.app/download?url=${encodeURIComponent(spotifyUrl)}`,
+      parser: (data) => data?.download_url || data?.url
     },
     
-    // ✅ API 4: API de bots populares
+    // API 3: SpotifyDL
     {
-      name: "Bots API",
-      url: `https://api.botcahx.eu.org/api/download/youtube?url=${encodeURIComponent(url)}&type=audio`,
-      parser: (data) => {
-        if (data.result) {
-          return {
-            url: data.result,
-            api: "Botcahx API"
-          }
-        }
-        return null
-      }
+      name: "SpotifyDL",
+      url: `https://spotifydl-api.vercel.app/?url=${encodeURIComponent(spotifyUrl)}`,
+      parser: (data) => data?.result?.download_link || data?.downloadLink
     },
     
-    // ✅ API 5: Savetube (alternativa)
+    // API 4: Spotify MP3 Downloader
     {
-      name: "Savetube",
-      url: `https://api.savetube.io/api/v1/download?url=${encodeURIComponent(url)}&format=mp3`,
-      parser: (data) => {
-        if (data.url) {
-          return {
-            url: data.url,
-            api: "Savetube.io"
-          }
-        }
-        return null
-      }
+      name: "SpotifyMP3",
+      url: `https://api.spotify-downloader.com/?url=${encodeURIComponent(spotifyUrl)}`,
+      parser: (data) => data?.audio || data?.mp3
+    },
+    
+    // API 5: All Media API
+    {
+      name: "AllMedia API",
+      url: `https://api.allmediadata.com/download/spotify?url=${encodeURIComponent(spotifyUrl)}`,
+      parser: (data) => data?.url || data?.download
+    },
+    
+    // API 6: Music DL
+    {
+      name: "MusicDL",
+      url: `https://musicdl.vercel.app/api/spotify?url=${encodeURIComponent(spotifyUrl)}`,
+      parser: (data) => data?.downloadUrl || data?.url
     }
   ]
 
-  // Probar cada API
   for (const api of apis) {
     try {
-      console.log(`🔹 Probando: ${api.name}`)
+      console.log(`🔹 Probando API Spotify: ${api.name}`)
       
-      let response
-      if (api.method === "POST") {
-        response = await fetch(api.url, {
-          method: "POST",
-          headers: api.headers || {},
-          body: api.body
-        })
-      } else {
-        response = await fetch(api.url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'application/json'
-          }
-        })
-      }
-
+      const response = await fetch(api.url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        timeout: 10000
+      })
+      
       if (response.ok) {
         const data = await response.json()
-        const result = await api.parser(data)
+        const downloadUrl = api.parser(data)
         
-        if (result && result.url) {
-          // Verificar que el enlace sea válido
-          const headRes = await fetch(result.url, { method: 'HEAD' })
+        if (downloadUrl && downloadUrl.startsWith('http')) {
+          // Verificar que el enlace funcione
+          const headRes = await fetch(downloadUrl, { method: 'HEAD' })
           if (headRes.ok) {
             console.log(`✅ ${api.name} funcionó!`)
             return {
-              url: result.url,
+              url: downloadUrl,
+              api: api.name,
               title: title,
-              api: result.api || api.name,
-              size: result.size
+              artist: artist
             }
           }
         }
@@ -255,7 +320,6 @@ async function getAudioFromWorkingAPIs(url, title) {
       continue
     }
     
-    // Pequeña pausa entre requests
     await new Promise(resolve => setTimeout(resolve, 500))
   }
   
@@ -263,46 +327,35 @@ async function getAudioFromWorkingAPIs(url, title) {
 }
 
 /**
- * 🔄 Fallback con Bochilteam Scraper
+ * 🎥 Buscar alternativa en YouTube
  */
-async function getAudioFallback(url, title) {
+async function searchYouTubeAlternative(query) {
   try {
-    const yt = await youtubedl(url).catch(async () => await youtubedlv2(url))
-    const dlUrl = await yt.audio["128kbps"].download()
+    const yts = await import('yt-search')
+    const search = await yts.default({ query, hl: "es", gl: "ES" })
     
-    return {
-      url: dlUrl,
-      title: title,
-      api: "Bochilteam Scraper",
-      isDirect: false
-    }
-  } catch (error) {
-    console.log("❌ Bochilteam falló:", error.message)
-    return null
-  }
-}
-
-/**
- * 🚀 Último recurso: ytdl-core
- */
-async function getAudioYtdl(url) {
-  try {
-    const info = await ytdl.getInfo(url)
-    const format = ytdl.chooseFormat(info.formats, { 
-      filter: 'audioonly',
-      quality: 'highestaudio'
-    })
-    
-    if (format && format.url) {
-      return {
-        url: format.url,
-        title: info.videoDetails.title,
-        api: "YouTube Direct",
-        isDirect: true
+    if (search.videos && search.videos.length > 0) {
+      const video = search.videos[0]
+      
+      // Descargar usando ytdl-core
+      const ytdl = await import('ytdl-core')
+      const info = await ytdl.default.getInfo(video.url)
+      const format = ytdl.default.chooseFormat(info.formats, { 
+        filter: 'audioonly',
+        quality: 'highestaudio'
+      })
+      
+      if (format && format.url) {
+        return {
+          url: format.url,
+          api: "YouTube Alternative",
+          title: video.title,
+          artist: "From YouTube"
+        }
       }
     }
   } catch (error) {
-    console.log("❌ ytdl-core falló:", error.message)
+    console.error("Error en YouTube alternative:", error)
   }
   return null
 }
@@ -312,14 +365,12 @@ async function getAudioYtdl(url) {
 // ============================================
 
 /**
- * 📊 Formatear números grandes
+ * ⏱️ Formatear duración
  */
-function formatNumber(num) {
-  if (!num) return "0"
-  if (num >= 1000000000) return (num / 1000000000).toFixed(1) + "B"
-  if (num >= 1000000) return (num / 1000000).toFixed(1) + "M"
-  if (num >= 1000) return (num / 1000).toFixed(1) + "K"
-  return num.toString()
+function formatDuration(ms) {
+  const minutes = Math.floor(ms / 60000)
+  const seconds = Math.floor((ms % 60000) / 1000)
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
 /**
@@ -330,52 +381,15 @@ function cleanFileName(name) {
     .replace(/[\\/:*?"<>|]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
-    .substring(0, 100)
+    .substring(0, 50)
 }
 
 /**
- * ⏱️ Formatear segundos a tiempo
+ * 📊 Formatear número
  */
-function formatDuration(seconds) {
-  if (!seconds) return "00:00"
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const secs = seconds % 60
-  
-  if (hours > 0) {
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-  }
-  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
-
-/**
- * 📏 Obtener tamaño del archivo
- */
-async function getFileSize(url) {
-  try {
-    const response = await fetch(url, { method: 'HEAD' })
-    const size = response.headers.get('content-length')
-    if (size) {
-      const mb = parseInt(size) / (1024 * 1024)
-      return mb.toFixed(2) + " MB"
-    }
-  } catch (error) {
-    console.log("Error obteniendo tamaño:", error.message)
-  }
-  return "Desconocido"
-}
-
-/**
- * 🔍 Buscar video alternativo (si el primero falla)
- */
-async function searchAlternativeVideo(query) {
-  try {
-    const search = await yts.search({ query, hl: "es", gl: "ES" })
-    if (search.videos.length > 1) {
-      return search.videos[1] // Retorna el segundo resultado
-    }
-  } catch (error) {
-    console.log("Error en búsqueda alternativa:", error)
-  }
-  return null
+function formatNumber(num) {
+  if (!num) return "0"
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + "M"
+  if (num >= 1000) return (num / 1000).toFixed(1) + "K"
+  return num.toString()
 }
