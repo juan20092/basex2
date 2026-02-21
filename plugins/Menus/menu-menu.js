@@ -542,10 +542,10 @@ let menu = `
 ╰━━━━━━⋆★⋆━━━━━━⬣
  `.trim()
     
-const img = ['https://files.catbox.moe/tkarzz.jpg']
+const Img = ['https://files.catbox.moe/tkarzz.jpg']
 
 try {
-await conn.sendMessage(m.chat, { video: { url: img.getRandom() }, gifPlayback: true, caption: menu, mentions: [m.sender, global.conn.user.jid] }, { quoted: fkontak }) 
+await conn.sendMessage(m.chat, { video: { url: Img.getRandom() }, gifPlayback: true, caption: menu, mentions: [m.sender, global.conn.user.jid] }, { quoted: fkontak }) 
 } catch (error) {
 try {
 await conn.sendMessage(m.chat, { image: { url: gataMenu.getRandom() }, gifPlayback: false, caption: menu, mentions: [m.sender, global.conn.user.jid] }, { quoted: fkontak }) 
