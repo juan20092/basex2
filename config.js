@@ -13,7 +13,8 @@ import { ar, en, es, id, pt } from './lib/idiomas/total-idiomas.js'
 // [ES] > Agrega el número que será Bot y los que serán propietarios.
 // [EN] > Add the number that will be Bot and those that will be owners.
 global.owner = [
-'593993370003'
+'593993370003', 
+  '573123139502' 
 ]
 
 global.mods = []
