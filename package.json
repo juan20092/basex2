@@ -30,8 +30,8 @@
   "license": "GPL-3.0-or-later",
   "dependencies": {
 
-  "@whiskeysockets/baileys": "npm:wileys",
-    
+  
+    "@whiskeysockets/baileys": "github:gatanina-li/baileys",
 
 
     
