@@ -31,7 +31,7 @@
   "dependencies": {
 
   "@whiskeysockets/baileys": "npm:wileys",
-    "jimp": "^1.6.0",
+    
 
 
     
