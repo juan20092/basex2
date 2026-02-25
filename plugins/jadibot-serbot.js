@@ -106,7 +106,7 @@ auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({
 msgRetry,
 msgRetryCache,
 browser: mcode ? ['Windows', 'Chrome', '110.0.5585.95'] : ['EliteBotGlobal', 'Chrome','2.0.0'],
-version: [2, 3000, 1027934701],
+version: [2, 3000, 1033959288],
 generateHighQualityLinkPreview: true
 };
 
