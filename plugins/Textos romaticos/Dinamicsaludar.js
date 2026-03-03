@@ -6,7 +6,7 @@ let handler = async (m, { conn, usedPrefix, command, text }) => {
     throw `🙋 *¿A quién deseas saludar?*\n\n✨ *Ejemplo:*\n\n.saludar @kevin`
 
   try {
-    // ✅ JID CORREGIDO - Esta es la única línea que cambié
+    // ✅ JID CORREGIDO - Ahora funciona con cualquier usuario
     let user = m.mentionedJid[0] 
       ? m.mentionedJid[0] 
       : m.quoted 
@@ -25,7 +25,7 @@ let handler = async (m, { conn, usedPrefix, command, text }) => {
       "participant": "0@s.whatsapp.net"
     }
 
-    // ✅ También corregí el texto para que use el JID real
+    // ✅ El mensaje usa el JID correcto - funciona para usuarios nuevos también
     let menu = `━━━━━━━━━━━━━━━━━━\n🖐🏻 *@${m.sender.split("@")[0]}* 𝘦𝘴𝘵𝘢 𝘴𝘢𝘭𝘶𝘥𝘢𝘯𝘥𝘰 𝘢 *@${user.split("@")[0]}* 😄\n\n💬 *¡Un saludo lleno de buena vibra!* ✨\n━━━━━━━━━━━━━━━━━━\n©𝘌𝘭𝘪𝘵𝘦𝘉𝘰𝘵𝘎𝘭𝘰𝘣𝘢𝘭 -`.trim()
 
     const img = './src/saludar.jpg'
@@ -36,25 +36,25 @@ let handler = async (m, { conn, usedPrefix, command, text }) => {
       await conn.sendMessage(m.chat, {
         image: { url: img },
         caption: menu,
-        mentions: [m.sender, user] // ✅ Menciones corregidas
+        mentions: [m.sender, user] // ✅ Menciona a ambos, sin importar si el usuario ha escrito antes
       }, { quoted: fkontak })
     } catch (error) {
       try {
         await conn.sendMessage(m.chat, {
           image: { url: gataMenu.getRandom() },
           caption: menu,
-          mentions: [m.sender, user] // ✅ Menciones corregidas
+          mentions: [m.sender, user]
         }, { quoted: fkontak })
       } catch (error) {
         try {
           await conn.sendMessage(m.chat, {
             image: gataImg.getRandom(),
             caption: menu,
-            mentions: [m.sender, user] // ✅ Menciones corregidas
+            mentions: [m.sender, user]
           }, { quoted: fkontak })
         } catch (error) {
           try {
-            await conn.sendFile(m.chat, imagen5, 'menu.jpg', menu, fkontak, false, { mentions: [m.sender, user] }) // ✅ Menciones corregidas
+            await conn.sendFile(m.chat, imagen5, 'menu.jpg', menu, fkontak, false, { mentions: [m.sender, user] })
           } catch (error) {
             return
           }
