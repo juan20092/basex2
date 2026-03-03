@@ -2,39 +2,37 @@ import util from 'util'
 import path from 'path' 
 
 function handler(m, { groupMetadata, command, usedPrefix, conn }) {
-   // ✅ Función que usa el JID real directamente
-   let user = a => a ? '@' + a.split('@')[0] : '@unknown'
-   
    let ps = groupMetadata.participants.map(v => v.id)
    
-   // ✅ Sacar 10 participantes ALEATORIOS (pueden repetirse para grupos pequeños)
-   // En grupos grandes (>100) es casi imposible que se repitan
-   let seleccionados = []
-   for (let i = 0; i < 10; i++) {
-      let randomIndex = Math.floor(Math.random() * ps.length)
-      seleccionados.push(ps[randomIndex])
-   }
-   
-   // ✅ Asignar cada uno a una variable
-   let [a, b, c, d, e, f, g, h, i, j] = seleccionados
+   // ✅ Seleccionar 10 ALEATORIOS (pueden repetirse, es parte de la diversión)
+   let a = ps[Math.floor(Math.random() * ps.length)]
+   let b = ps[Math.floor(Math.random() * ps.length)]
+   let c = ps[Math.floor(Math.random() * ps.length)]
+   let d = ps[Math.floor(Math.random() * ps.length)]
+   let e = ps[Math.floor(Math.random() * ps.length)]
+   let f = ps[Math.floor(Math.random() * ps.length)]
+   let g = ps[Math.floor(Math.random() * ps.length)]
+   let h = ps[Math.floor(Math.random() * ps.length)]
+   let i = ps[Math.floor(Math.random() * ps.length)]
+   let j = ps[Math.floor(Math.random() * ps.length)]
 
-   // ✅ Array de menciones con los JIDs seleccionados
-   let mentions = seleccionados.filter(Boolean)
+   // ✅ Array de menciones con los JIDs reales (como en follar)
+   let mentions = [a, b, c, d, e, f, g, h, i, j].filter(Boolean)
 
    if (command == 'topgays') {
       let vn = './media/gay2.mp3'
       let top = `*🌈TOP 10 GAYS/LESBIANAS DEL GRUPO🌈*
     
-*_1.- 🏳️‍🌈 ${user(a)}_* 🏳️‍🌈
-*_2.- 🪂 ${user(b)}_* 🪂
-*_3.- 🪁 ${user(c)}_* 🪁
-*_4.- 🏳️‍🌈 ${user(d)}_* 🏳️‍🌈
-*_5.- 🪂 ${user(e)}_* 🪂
-*_6.- 🪁 ${user(f)}_* 🪁
-*_7.- 🏳️‍🌈 ${user(g)}_* 🏳️‍🌈
-*_8.- 🪂 ${user(h)}_* 🪂
-*_9.- 🪁 ${user(i)}_* 🪁
-*_10.- 🏳️‍🌈 ${user(j)}_* 🏳️‍🌈`
+*_1.- 🏳️‍🌈 @${a.split('@')[0]}_* 🏳️‍🌈
+*_2.- 🪂 @${b.split('@')[0]}_* 🪂
+*_3.- 🪁 @${c.split('@')[0]}_* 🪁
+*_4.- 🏳️‍🌈 @${d.split('@')[0]}_* 🏳️‍🌈
+*_5.- 🪂 @${e.split('@')[0]}_* 🪂
+*_6.- 🪁 @${f.split('@')[0]}_* 🪁
+*_7.- 🏳️‍🌈 @${g.split('@')[0]}_* 🏳️‍🌈
+*_8.- 🪂 @${h.split('@')[0]}_* 🪂
+*_9.- 🪁 @${i.split('@')[0]}_* 🪁
+*_10.- 🏳️‍🌈 @${j.split('@')[0]}_* 🏳️‍🌈`
       m.reply(top, null, { mentions })
       conn.sendFile(m.chat, vn, 'error.mp3', null, m, true, {
          type: 'audioMessage', 
@@ -46,16 +44,16 @@ function handler(m, { groupMetadata, command, usedPrefix, conn }) {
       let vn = './media/otaku.mp3'
       let top = `*🌸 TOP 10 OTAKUS DEL GRUPO 🌸*
     
-*_1.- 💮 ${user(a)}_* 💮
-*_2.- 🌷 ${user(b)}_* 🌷
-*_3.- 💮 ${user(c)}_* 💮
-*_4.- 🌷 ${user(d)}_* 🌷
-*_5.- 💮 ${user(e)}_* 💮
-*_6.- 🌷 ${user(f)}_* 🌷
-*_7.- 💮 ${user(g)}_* 💮
-*_8.- 🌷 ${user(h)}_* 🌷
-*_9.- 💮 ${user(i)}_* 💮
-*_10.- 🌷 ${user(j)}_* 🌷`
+*_1.- 💮 @${a.split('@')[0]}_* 💮
+*_2.- 🌷 @${b.split('@')[0]}_* 🌷
+*_3.- 💮 @${c.split('@')[0]}_* 💮
+*_4.- 🌷 @${d.split('@')[0]}_* 🌷
+*_5.- 💮 @${e.split('@')[0]}_* 💮
+*_6.- 🌷 @${f.split('@')[0]}_* 🌷
+*_7.- 💮 @${g.split('@')[0]}_* 💮
+*_8.- 🌷 @${h.split('@')[0]}_* 🌷
+*_9.- 💮 @${i.split('@')[0]}_* 💮
+*_10.- 🌷 @${j.split('@')[0]}_* 🌷`
       m.reply(top, null, { mentions })
       conn.sendFile(m.chat, vn, 'otaku.mp3', null, m, true, {
          type: 'audioMessage', 
@@ -66,155 +64,155 @@ function handler(m, { groupMetadata, command, usedPrefix, conn }) {
    if (command == 'topintegrantes' || command == 'topintegrante') {
       let top = `*_💎TOP 10 L@S MEJORES INTEGRANTES👑_*
     
-*_1.- 💎 ${user(a)}_* 💎
-*_2.- 👑 ${user(b)}_* 👑
-*_3.- 💎 ${user(c)}_* 💎
-*_4.- 👑 ${user(d)}_* 👑
-*_5.- 💎 ${user(e)}_* 💎
-*_6.- 👑 ${user(f)}_* 👑
-*_7.- 💎 ${user(g)}_* 💎
-*_8.- 👑 ${user(h)}_* 👑
-*_9.- 💎 ${user(i)}_* 💎
-*_10.- 👑 ${user(j)}_* 👑`
+*_1.- 💎 @${a.split('@')[0]}_* 💎
+*_2.- 👑 @${b.split('@')[0]}_* 👑
+*_3.- 💎 @${c.split('@')[0]}_* 💎
+*_4.- 👑 @${d.split('@')[0]}_* 👑
+*_5.- 💎 @${e.split('@')[0]}_* 💎
+*_6.- 👑 @${f.split('@')[0]}_* 👑
+*_7.- 💎 @${g.split('@')[0]}_* 💎
+*_8.- 👑 @${h.split('@')[0]}_* 👑
+*_9.- 💎 @${i.split('@')[0]}_* 💎
+*_10.- 👑 @${j.split('@')[0]}_* 👑`
       m.reply(top, null, { mentions })
    }
    
    if (command == 'toplagrasa' || command == 'topgrasa') {
       let top = `*_Uwu TOP 10 LA GRASA Uwu_* 
     
-*_1.- Bv ${user(a)} Bv_*
-*_2.- :v ${user(b)} :v_*
-*_3.- :D ${user(c)} :D_*
-*_4.- Owo ${user(d)} Owo_*
-*_5.- U.u ${user(e)} U.u_*
-*_6.- >:v ${user(f)} >:v_*
-*_7.- :'v ${user(g)} :'v_*
-*_8.- ._. ${user(h)} ._._*
-*_9.- :V ${user(i)} :V_*
-*_10.- XD ${user(j)} XD_*`
+*_1.- Bv @${a.split('@')[0]} Bv_*
+*_2.- :v @${b.split('@')[0]} :v_*
+*_3.- :D @${c.split('@')[0]} :D_*
+*_4.- Owo @${d.split('@')[0]} Owo_*
+*_5.- U.u @${e.split('@')[0]} U.u_*
+*_6.- >:v @${f.split('@')[0]} >:v_*
+*_7.- :'v @${g.split('@')[0]} :'v_*
+*_8.- ._. @${h.split('@')[0]} ._._*
+*_9.- :V @${i.split('@')[0]} :V_*
+*_10.- XD @${j.split('@')[0]} XD_*`
       m.reply(top, null, { mentions })
    }
    
    if (command == 'toppanafrescos' || command == 'toppanafresco') {
       let top = `*_👊TOP 10 PANAFRESCOS👊_* 
     
-*_1.- 🤑 ${user(a)}_* 🤑
-*_2.- 🤙 ${user(b)}_* 🤙
-*_3.- 😎 ${user(c)}_* 😎
-*_4.- 👌 ${user(d)}_* 👌
-*_5.- 🧐 ${user(e)}_* 🧐
-*_6.- 😃 ${user(f)}_* 😃
-*_7.- 😋 ${user(g)}_* 😋
-*_8.- 🤜 ${user(h)}_* 🤜
-*_9.- 💪 ${user(i)}_* 💪
-*_10.- 😉 ${user(j)}_* 😉`
+*_1.- 🤑 @${a.split('@')[0]}_* 🤑
+*_2.- 🤙 @${b.split('@')[0]}_* 🤙
+*_3.- 😎 @${c.split('@')[0]}_* 😎
+*_4.- 👌 @${d.split('@')[0]}_* 👌
+*_5.- 🧐 @${e.split('@')[0]}_* 🧐
+*_6.- 😃 @${f.split('@')[0]}_* 😃
+*_7.- 😋 @${g.split('@')[0]}_* 😋
+*_8.- 🤜 @${h.split('@')[0]}_* 🤜
+*_9.- 💪 @${i.split('@')[0]}_* 💪
+*_10.- 😉 @${j.split('@')[0]}_* 😉`
       m.reply(top, null, { mentions })
    }
    
    if (command == 'topshiposters' || command == 'topshipost') {
       let top = `*_😱TOP 10 SHIPOSTERS DEL GRUPO😱_* 
     
-*_1.- 😈 ${user(a)}_* 😈
-*_2.- 🤙 ${user(b)}_* 🤙
-*_3.- 🥶 ${user(c)}_* 🥶
-*_4.- 🤑 ${user(d)}_* 🤑
-*_5.- 🥵 ${user(e)}_* 🥵
-*_6.- 🤝 ${user(f)}_* 🤝
-*_7.- 😟 ${user(g)}_* 😟
-*_8.- 😨 ${user(h)}_* 😨
-*_9.- 😇 ${user(i)}_* 😇
-*_10.- 🤠 ${user(j)}_* 🤠`
+*_1.- 😈 @${a.split('@')[0]}_* 😈
+*_2.- 🤙 @${b.split('@')[0]}_* 🤙
+*_3.- 🥶 @${c.split('@')[0]}_* 🥶
+*_4.- 🤑 @${d.split('@')[0]}_* 🤑
+*_5.- 🥵 @${e.split('@')[0]}_* 🥵
+*_6.- 🤝 @${f.split('@')[0]}_* 🤝
+*_7.- 😟 @${g.split('@')[0]}_* 😟
+*_8.- 😨 @${h.split('@')[0]}_* 😨
+*_9.- 😇 @${i.split('@')[0]}_* 😇
+*_10.- 🤠 @${j.split('@')[0]}_* 🤠`
       m.reply(top, null, { mentions })
    }
    
    if (command == 'toppajer@s') {
       let top = `*_😏TOP L@S MAS PAJEROS/AS DEL GRUPO💦_* 
     
-*_1.- 🥵 ${user(a)}_* 💦
-*_2.- 🥵 ${user(b)}_* 💦
-*_3.- 🥵 ${user(c)}_* 💦
-*_4.- 🥵 ${user(d)}_* 💦
-*_5.- 🥵 ${user(e)}_* 💦
-*_6.- 🥵 ${user(f)}_* 💦
-*_7.- 🥵 ${user(g)}_* 💦
-*_8.- 🥵 ${user(h)}_* 💦
-*_9.- 🥵 ${user(i)}_* 💦
-*_10.- 🥵 ${user(j)}_* 💦`
+*_1.- 🥵 @${a.split('@')[0]}_* 💦
+*_2.- 🥵 @${b.split('@')[0]}_* 💦
+*_3.- 🥵 @${c.split('@')[0]}_* 💦
+*_4.- 🥵 @${d.split('@')[0]}_* 💦
+*_5.- 🥵 @${e.split('@')[0]}_* 💦
+*_6.- 🥵 @${f.split('@')[0]}_* 💦
+*_7.- 🥵 @${g.split('@')[0]}_* 💦
+*_8.- 🥵 @${h.split('@')[0]}_* 💦
+*_9.- 🥵 @${i.split('@')[0]}_* 💦
+*_10.- 🥵 @${j.split('@')[0]}_* 💦`
       m.reply(top, null, { mentions })
    }
    
    if (command == 'toplind@s' || command == 'toplindos') {
       let top = `*_😳TOP L@S MAS LIND@S Y SEXIS DEL GRUPO😳_*
     
-*_1.- ✨ ${user(a)}_* ✨
-*_2.- ✨ ${user(b)}_* ✨
-*_3.- ✨ ${user(c)}_* ✨
-*_4.- ✨ ${user(d)}_* ✨
-*_5.- ✨ ${user(e)}_* ✨
-*_6.- ✨ ${user(f)}_* ✨
-*_7.- ✨ ${user(g)}_* ✨
-*_8.- ✨ ${user(h)}_* ✨
-*_9.- ✨ ${user(i)}_* ✨
-*_10.- ✨ ${user(j)}_* ✨`
+*_1.- ✨ @${a.split('@')[0]}_* ✨
+*_2.- ✨ @${b.split('@')[0]}_* ✨
+*_3.- ✨ @${c.split('@')[0]}_* ✨
+*_4.- ✨ @${d.split('@')[0]}_* ✨
+*_5.- ✨ @${e.split('@')[0]}_* ✨
+*_6.- ✨ @${f.split('@')[0]}_* ✨
+*_7.- ✨ @${g.split('@')[0]}_* ✨
+*_8.- ✨ @${h.split('@')[0]}_* ✨
+*_9.- ✨ @${i.split('@')[0]}_* ✨
+*_10.- ✨ @${j.split('@')[0]}_* ✨`
       m.reply(top, null, { mentions })
    }
    
    if (command == 'topput@s') {
       let top = `*_😏TOP L@S MAS PUT@S DEL GRUPO SON🔥_* 
     
-*_1.- 👉 ${user(a)}_* 👌
-*_2.- 👉 ${user(b)}_* 👌
-*_3.- 👉 ${user(c)}_* 👌
-*_4.- 👉 ${user(d)}_* 👌
-*_5.- 👉 ${user(e)}_* 👌
-*_6.- 👉 ${user(f)}_* 👌
-*_7.- 👉 ${user(g)}_* 👌
-*_8.- 👉 ${user(h)}_* 👌
-*_9.- 👉 ${user(i)}_* 👌
-*_10.- 👉 ${user(j)}_* 👌`
+*_1.- 👉 @${a.split('@')[0]}_* 👌
+*_2.- 👉 @${b.split('@')[0]}_* 👌
+*_3.- 👉 @${c.split('@')[0]}_* 👌
+*_4.- 👉 @${d.split('@')[0]}_* 👌
+*_5.- 👉 @${e.split('@')[0]}_* 👌
+*_6.- 👉 @${f.split('@')[0]}_* 👌
+*_7.- 👉 @${g.split('@')[0]}_* 👌
+*_8.- 👉 @${h.split('@')[0]}_* 👌
+*_9.- 👉 @${i.split('@')[0]}_* 👌
+*_10.- 👉 @${j.split('@')[0]}_* 👌`
       m.reply(top, null, { mentions })
    }
    
    if (command == 'topfamosos' || command == 'topfamos@s') {
       let top = `*_🌟TOP PERSONAS FAMOSAS EN EL GRUPO🌟_* 
     
-*_1.- 🛫 ${user(a)}_* 🛫
-*_2.- 🥂 ${user(b)}_* 🥂
-*_3.- 🤩 ${user(c)}_* 🤩
-*_4.- 🛫 ${user(d)}_* 🛫
-*_5.- 🥂 ${user(e)}_* 🥂
-*_6.- 🤩 ${user(f)}_* 🤩
-*_7.- 🛫 ${user(g)}_* 🛫
-*_8.- 🥂 ${user(h)}_* 🥂
-*_9.- 🤩 ${user(i)}_* 🤩
-*_10.- 🛫 ${user(j)}_* 🛫`
+*_1.- 🛫 @${a.split('@')[0]}_* 🛫
+*_2.- 🥂 @${b.split('@')[0]}_* 🥂
+*_3.- 🤩 @${c.split('@')[0]}_* 🤩
+*_4.- 🛫 @${d.split('@')[0]}_* 🛫
+*_5.- 🥂 @${e.split('@')[0]}_* 🥂
+*_6.- 🤩 @${f.split('@')[0]}_* 🤩
+*_7.- 🛫 @${g.split('@')[0]}_* 🛫
+*_8.- 🥂 @${h.split('@')[0]}_* 🥂
+*_9.- 🤩 @${i.split('@')[0]}_* 🤩
+*_10.- 🛫 @${j.split('@')[0]}_* 🛫`
       m.reply(top, null, { mentions })
    }
    
    if (command == 'topparejas' || command == 'top5parejas' || command == 'top2parejas') {
       let top = `*_😍 Las 5 maravillosas parejas del grupo 😍_*
     
-*_1.- ${user(a)} 💘 ${user(b)}_* 
+*_1.- @${a.split('@')[0]} 💘 @${b.split('@')[0]}_* 
 Que hermosa pareja 💖, me invitan a su Boda 🛐
 
-*_2.- ${user(c)} 💘 ${user(d)}_*  
+*_2.- @${c.split('@')[0]} 💘 @${d.split('@')[0]}_*  
 🌹 Ustedes se merecen lo mejor del mundo 💞
 
-*_3.- ${user(e)} 💘 ${user(f)}_* 
+*_3.- @${e.split('@')[0]} 💘 @${f.split('@')[0]}_* 
 Tan enamorados 😍, para cuando la familia 🥰
 
-*_4.- ${user(g)} 💘 ${user(h)}_* 
+*_4.- @${g.split('@')[0]} 💘 @${h.split('@')[0]}_* 
 💗 Decreto que ustedes son la pareja del Año 💗 
 
-*_5.- ${user(i)} 💘 ${user(j)}_* 
+*_5.- @${i.split('@')[0]} 💘 @${j.split('@')[0]}_* 
 Genial! 💝, están de Luna de miel 🥵✨❤️‍🔥`
       if (command == 'top2parejas') {
          top = `*_😍 Las 5 maravillosas parejas del grupo 😍_*
     
-*_1.- ${user(a)} 💘 ${user(b)}_* 
+*_1.- @${a.split('@')[0]} 💘 @${b.split('@')[0]}_* 
 Que hermosa pareja 💖, me invitan a su Boda 🛐
 
-*_2.- ${user(c)} 💘 ${user(d)}_*  
+*_2.- @${c.split('@')[0]} 💘 @${d.split('@')[0]}_*  
 🌹 Ustedes se merecen lo mejor del mundo 💞`
       }
       m.reply(top, null, { mentions })
