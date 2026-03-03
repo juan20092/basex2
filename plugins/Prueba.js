@@ -45,7 +45,7 @@ const handler = async (m, { conn, usedPrefix, command, text, participants }) => 
   }
 };
 
-handler.command = /^(saludar)$/i;
+handler.command = /^(salud)$/i;
 handler.group = true;
 handler.register = false;
 
