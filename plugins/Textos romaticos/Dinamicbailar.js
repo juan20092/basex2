@@ -1,75 +1,87 @@
-import fs, { promises } from 'fs'
-import fetch from 'node-fetch'
-
 let handler = async (m, { conn, usedPrefix, command, text }) => {
-  if (!text) throw `🎶 *¡Oops! Olvidaste mencionar al usuario con quien quieres bailar!* 💃\n\n✨ *Ejemplo:*\n\n.dance @kevin`
-
-  try {
-    let user = m.mentionedJid[0] ? m.mentionedJid[0] : m.quoted.sender
-    let fkontak = {
-      "key": { "participants": "0@s.whatsapp.net", "remoteJid": "status@broadcast", "fromMe": false, "id": "Halo" },
-      "message": {
-        "contactMessage": {
-          "vcard": `BEGIN:VCARD\nVERSION:3.0\nN:Sy;Bot;;;\nFN:y\nitem1.TEL;waid=${m.sender.split('@')[0]}:${m.sender.split('@')[0]}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`
-        }
-      },
-      "participant": "0@s.whatsapp.net"
-    }
-
-    let menu = `━━━━━━━━━━━━━━━━━━\n🎉 *¡@${m.sender.split("@")[0]} está bailando con* *${text}* 💃🏻🕺🏻✨\n\n🎶 *¡Que suene la música y a disfrutar!* 🎶\n\n💖 *Que el ritmo los acompañe* 💖\n\n━━━━━━━━━━━━━━━━━━\n©𝘌𝘭𝘪𝘵𝘦𝘉𝘰𝘵𝘎𝘭𝘰𝘣𝘢𝘭 -`.trim()
-
-    const img = './src/baile.jpg'  // Cambié el video por una imagen, usa la ruta de tu imagen
-
-    await m.react('💃🏻')
+    // Validación mejorada
+    if (!text && !m.mentionedJid[0] && !m.quoted) 
+        throw `🎶 *¡Oops! Olvidaste mencionar al usuario con quien quieres bailar!* 💃\n\n✨ *Ejemplo:*\n\n.${command} @usuario`
 
     try {
-      await conn.sendMessage(m.chat, { 
-        image: { url: img }, 
-        caption: menu, 
-        mentions: await conn.parseMention(menu) 
-      }, { quoted: fkontak })
-    } catch (error) {
-      try {
-        await conn.sendMessage(m.chat, { 
-          image: { url: gataMenu.getRandom() }, 
-          caption: menu, 
-          mentions: await conn.parseMention(menu) 
-        }, { quoted: fkontak })
-      } catch (error) {
-        try {
-          await conn.sendMessage(m.chat, { 
-            image: gataImg.getRandom(), 
-            caption: menu, 
-            mentions: await conn.parseMention(menu) 
-          }, { quoted: fkontak })
-        } catch (error) {
-          try {
-            await conn.sendFile(m.chat, imagen5, 'menu.jpg', menu, fkontak, false, { mentions: await conn.parseMention(menu) })
-          } catch (error) {
-            return
-          }
-        }
-      }
-    }
+        // ✅ Obtener el usuario real (CORREGIDO)
+        let user = m.mentionedJid[0] 
+            ? m.mentionedJid[0] 
+            : m.quoted 
+                ? m.quoted.sender 
+                : false
 
-  } catch (e) {
-    await m.reply(
-      `${lenguajeGB['smsMalError3']()} 💥\n*Algo salió mal, pero no te preocupes* 🛠️\n\n💬 *Puedes reportar el error usando el comando:* ${usedPrefix}${lenguajeGB.lenguaje() == 'es' ? 'reporte' : 'report'}\n\n❌ *Te ayudaremos a solucionarlo.*`
-    )
-    console.log(`❗❗ ${lenguajeGB['smsMensError2']()} ${usedPrefix + command} ❗❗`)
-    console.log(e)
-  }
+        if (!user) throw `⚠️ No encontré a quién mencionas.`
+
+        let senderName = m.sender.split('@')[0]
+        let userName = user.split('@')[0]
+
+        let fkontak = { 
+            key: { participants: "0@s.whatsapp.net", remoteJid: "status@broadcast", fromMe: false, id: "Halo" }, 
+            message: { 
+                contactMessage: { 
+                    vcard: `BEGIN:VCARD\nVERSION:3.0\nN:Sy;Bot;;;\nFN:y\nitem1.TEL;waid=${m.sender.split('@')[0]}:${m.sender.split('@')[0]}\nitem1.X-ABLabel:Ponsel\nEND:VCARD` 
+                }
+            }, 
+            participant: "0@s.whatsapp.net" 
+        }
+
+        // ✅ Menú corregido con las menciones correctas
+        let menu = `━━━━━━━━━━━━━━━━━━
+🎉 *¡@${senderName} está bailando con @${userName}!* 💃🏻🕺🏻✨
+
+🎶 *¡Que suene la música y a disfrutar!* 🎶
+
+💖 *Que el ritmo los acompañe* 💖
+
+━━━━━━━━━━━━━━━━━━
+©𝘌𝘭𝘪𝘵𝘦𝘉𝘰𝘵𝘎𝘭𝘰𝘣𝘢𝘭 -`.trim()
+
+        // Array de imágenes de baile (URLs)
+        const danceImages = [
+            'https://telegra.ph/file/ejemplo1.jpg', // ⚠️ Reemplaza estas URLs con imágenes reales de baile
+            'https://telegra.ph/file/ejemplo2.jpg',
+            'https://telegra.ph/file/ejemplo3.jpg',
+            'https://telegra.ph/file/ejemplo4.jpg',
+            'https://telegra.ph/file/ejemplo5.jpg'
+        ]
+
+        await m.react('💃🏻')
+
+        try {
+            // Intentar enviar imagen con URL aleatoria
+            await conn.sendMessage(m.chat, { 
+                image: { url: danceImages[Math.floor(Math.random() * danceImages.length)] }, 
+                caption: menu, 
+                mentions: [m.sender, user]  // ✅ Menciones correctas
+            }, { quoted: fkontak })
+        } catch (imgError) {
+            console.log('Error con imagen online, intentando con imagen local:', imgError)
+            try {
+                // Fallback a imagen local
+                await conn.sendMessage(m.chat, { 
+                    image: fs.readFileSync('./src/baile.jpg'), // Cambia la ruta si es necesario
+                    caption: menu, 
+                    mentions: [m.sender, user]
+                }, { quoted: fkontak })
+            } catch (localError) {
+                console.log('Error con imagen local, enviando solo texto:', localError)
+                // Fallback final: solo texto
+                await conn.sendMessage(m.chat, { 
+                    text: menu,
+                    mentions: [m.sender, user]
+                }, { quoted: fkontak })
+            }
+        }
+
+    } catch (e) {
+        console.log('❌ Error en el comando bailar:', e)
+        await m.reply(`❌ Hubo un error ejecutando el comando.`)
+    }
 }
 
-handler.command = /^(bailar)$/i
+handler.command = /^(bailar|dance)$/i
 handler.register = false
 handler.group = true
 
 export default handler
-
-function clockString(ms) {
-  let h = isNaN(ms) ? '--' : Math.floor(ms / 3600000)
-  let m = isNaN(ms) ? '--' : Math.floor(ms / 60000) % 60
-  let s = isNaN(ms) ? '--' : Math.floor(ms / 1000) % 60
-  return [h, m, s].map(v => v.toString().padStart(2, 0)).join(':')
-}
