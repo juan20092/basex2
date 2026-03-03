@@ -39,7 +39,7 @@ function handler(m, { usedPrefix, command, text, groupMetadata }) {
   }
 }
 
-handler.command = /^(saludar)$/i
+handler.command = /^(salud)$/i
 handler.group = true
 handler.register = false
 
