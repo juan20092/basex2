@@ -1,9 +1,52 @@
-let handler = async (m, { conn, command, text }) => {
-if (!text) throw `*Ingrese el @ o el nombre de la persona que quieras saber si te puedes ${command.replace('how', '')}*`
-let user = m.mentionedJid[0] ? m.mentionedJid[0] : m.quoted.sender
-conn.reply(m.chat, `🤤👅🥵 *𝐀𝐂𝐀𝐁𝐀𝐒 𝐃𝐄 𝐅𝐎𝐋𝐋𝐀𝐑𝐓𝐄𝐋@!*🥵👅🤤\n\n*𝙏𝙚 𝙖𝙘𝙖𝙗𝙖𝙨 𝙙𝙚 𝙛𝙤𝙡𝙡𝙖𝙧 𝙖 𝙡𝙖 𝙥𝙚𝙧𝙧𝙖 𝙙𝙚* *${text}* ⁩ *𝙖 𝟰 𝙥𝙖𝙩𝙖𝙨 𝙢𝙞𝙚𝙣𝙩𝙧𝙖𝙨 𝙩𝙚 𝙜𝙚𝙢𝙞𝙖 𝙘𝙤𝙢𝙤 𝙪𝙣𝙖 𝙢𝙖𝙡𝙙𝙞𝙩𝙖 𝙥𝙚𝙧𝙧𝙖 "𝐀𝐚𝐚𝐡.., 𝐀𝐚𝐚𝐡𝐡, 𝐬𝐢𝐠𝐮𝐞, 𝐧𝐨 𝐩𝐚𝐫𝐞𝐬, 𝐧𝐨 𝐩𝐚𝐫𝐞𝐬.." 𝙮 𝙡𝙖 𝙝𝙖𝙨 𝙙𝙚𝙟𝙖𝙙𝙤 𝙩𝙖𝙣 𝙧𝙚𝙫𝙚𝙣𝙩𝙖𝙙𝙖 𝙦𝙪𝙚 𝙣𝙤 𝙥𝙪𝙚𝙙𝙚 𝙨𝙤𝙨𝙩𝙚𝙣𝙚𝙧 𝙣𝙞 𝙨𝙪 𝙥𝙧𝙤𝙥𝙞𝙤 𝙘𝙪𝙚𝙧𝙥𝙤 𝙡𝙖 𝙢𝙖𝙡𝙙𝙞𝙩𝙖 𝙯𝙤𝙧𝙧𝙖!*\n\n*${text}*\n🤤🥵 *¡𝐘𝐀 𝐓𝐄 𝐇𝐀𝐍 𝐅𝐎𝐋𝐋𝐀𝐃𝐎!* 🥵🤤`, null, { mentions: [user] })
-}
-handler.command = /^(Follar|violar)/i
-handler.fail = null
-handler.register = false
-export default handler
+import * as fs from 'fs';
+
+const handler = async (m, { conn, usedPrefix, command, text, participants }) => {
+  try {
+    // Validación
+    if (!text && !m.mentionedJid[0] && !m.quoted) {
+      throw `🙋 *¿A quién deseas saludar?*\n\n✨ *Ejemplo:*\n${usedPrefix + command} @usuario`;
+    }
+
+    // Obtener usuario mencionado o citado
+    let user = m.mentionedJid[0] || (m.quoted ? m.quoted.sender : null);
+    if (!user) throw `⚠️ No encontré a quién mencionar.`;
+
+    // Decodificar JIDs como en hidetag
+    const emisor = conn.decodeJid(m.sender);
+    const objetivo = conn.decodeJid(user);
+
+    const nombreEmisor = emisor.split('@')[0];
+    const nombreObjetivo = objetivo.split('@')[0];
+
+    const menu = `━━━━━━━━━━━━━━━━━━
+🖐🏻 *@${nombreEmisor}* 𝘦𝘴𝘵𝘢 𝘴𝘢𝘭𝘶𝘥𝘢𝘯𝘥𝘰 𝘢 *@${nombreObjetivo}* 😄
+
+💬 *¡Un saludo lleno de buena vibra!* ✨
+━━━━━━━━━━━━━━━━━━
+©𝘌𝘭𝘪𝘵𝘦𝘉𝘰𝘵𝘎𝘭𝘰𝘣𝘢𝘭 -`.trim();
+
+    // Reacción como en hidetag
+    await conn.sendMessage(m.chat, {
+      react: {
+        text: '🖐🏻',
+        key: m.key
+      }
+    });
+
+    // Enviar mensaje como en hidetag (solo texto)
+    await conn.sendMessage(m.chat, {
+      text: menu,
+      mentions: [emisor, objetivo]
+    }, { quoted: m });
+
+  } catch (e) {
+    console.error('Error en saludar:', e);
+    await m.reply(typeof e === 'string' ? e : '❌ Error al ejecutar el comando');
+  }
+};
+
+handler.command = /^(saludar)$/i;
+handler.group = true;
+handler.register = false;
+
+export default handler;
