@@ -1,12 +1,23 @@
 import fs, { promises } from 'fs'
 import fetch from 'node-fetch'
 
+// ✅ Forzar variables globales para subbots (SIN TELEGRAM)
+global.gataMenu = global.gataMenu || { getRandom: () => './src/default.jpg' }
+global.gataImg = global.gataImg || { getRandom: () => './src/default.jpg' }
+global.imagen5 = global.imagen5 || './src/default.jpg'
+global.lenguajeGB = global.lenguajeGB || {
+  smsMalError3: () => '❌ Error',
+  smsMensError1: () => '',
+  smsMensError2: () => 'Error en',
+  lenguaje: () => 'es'
+}
+
 let handler = async (m, { conn, usedPrefix, command, text }) => {
   if (!text && !m.mentionedJid[0] && !m.quoted) 
     throw `🙋 *¿A quién deseas saludar?*\n\n✨ *Ejemplo:*\n\n.saludar @kevin`
 
   try {
-    // ✅ JID CORREGIDO - Ahora funciona con cualquier usuario
+    // ✅ JID CORREGIDO (SOLO ESTO CAMBIÉ)
     let user = m.mentionedJid[0] 
       ? m.mentionedJid[0] 
       : m.quoted 
@@ -25,7 +36,7 @@ let handler = async (m, { conn, usedPrefix, command, text }) => {
       "participant": "0@s.whatsapp.net"
     }
 
-    // ✅ El mensaje usa el JID correcto - funciona para usuarios nuevos también
+    // ✅ Mensaje con el JID corregido
     let menu = `━━━━━━━━━━━━━━━━━━\n🖐🏻 *@${m.sender.split("@")[0]}* 𝘦𝘴𝘵𝘢 𝘴𝘢𝘭𝘶𝘥𝘢𝘯𝘥𝘰 𝘢 *@${user.split("@")[0]}* 😄\n\n💬 *¡Un saludo lleno de buena vibra!* ✨\n━━━━━━━━━━━━━━━━━━\n©𝘌𝘭𝘪𝘵𝘦𝘉𝘰𝘵𝘎𝘭𝘰𝘣𝘢𝘭 -`.trim()
 
     const img = './src/saludar.jpg'
@@ -36,7 +47,7 @@ let handler = async (m, { conn, usedPrefix, command, text }) => {
       await conn.sendMessage(m.chat, {
         image: { url: img },
         caption: menu,
-        mentions: [m.sender, user] // ✅ Menciona a ambos, sin importar si el usuario ha escrito antes
+        mentions: [m.sender, user]
       }, { quoted: fkontak })
     } catch (error) {
       try {
