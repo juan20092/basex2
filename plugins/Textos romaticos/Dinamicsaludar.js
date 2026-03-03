@@ -1,13 +1,12 @@
 import fs, { promises } from 'fs'
 import fetch from 'node-fetch'
 
-let handler = async (m, { conn, usedPrefix, command, text }) => {
-  // ✅ QUITÉ la dependencia de global.db
+let handler = async (m, { conn, usedPrefix, command, text, participants }) => {
   if (!text && !m.mentionedJid[0] && !m.quoted) 
     throw `🙋 *¿A quién deseas saludar?*\n\n✨ *Ejemplo:*\n\n.saludar @kevin`
 
   try {
-    // ✅ JID CORREGIDO (como siempre)
+    // ✅ JID CORREGIDO
     let user = m.mentionedJid[0] 
       ? m.mentionedJid[0] 
       : m.quoted 
@@ -15,6 +14,10 @@ let handler = async (m, { conn, usedPrefix, command, text }) => {
         : false
 
     if (!user) throw `⚠️ No encontré a quién mencionas.`
+
+    // ✅ Obtener metadata del grupo como en tu tagall
+    const groupMetadata = await conn.groupMetadata(m.chat)
+    const groupName = groupMetadata.subject
 
     let fkontak = {
       "key": { "participants": "0@s.whatsapp.net", "remoteJid": "status@broadcast", "fromMe": false, "id": "Halo" },
@@ -26,48 +29,25 @@ let handler = async (m, { conn, usedPrefix, command, text }) => {
       "participant": "0@s.whatsapp.net"
     }
 
-    // ✅ QUITÉ el emojiTag que dependía de global.db
-    let menu = `━━━━━━━━━━━━━━━━━━\n🖐🏻 *@${m.sender.split("@")[0]}* 𝘦𝘴𝘵𝘢 𝘴𝘢𝘭𝘶𝘥𝘢𝘯𝘥𝘰 𝘢 *@${user.split("@")[0]}* 😄\n\n💬 *¡Un saludo lleno de buena vibra!* ✨\n━━━━━━━━━━━━━━━━━━\n©𝘌𝘭𝘪𝘵𝘦𝘉𝘰𝘵𝘎𝘭𝘰𝘣𝘢𝘭 -`.trim()
+    // ✅ Mensaje con menciones
+    let menu = `━━━━━━━━━━━━━━━━━━
+🖐🏻 *@${m.sender.split("@")[0]}* 𝘦𝘴𝘵𝘢 𝘴𝘢𝘭𝘶𝘥𝘢𝘯𝘥𝘰 𝘢 *@${user.split("@")[0]}* 😄
 
-    const img = './src/saludar.jpg'
+💬 *¡Un saludo lleno de buena vibra!* ✨
+━━━━━━━━━━━━━━━━━━
+${groupName}
+©𝘌𝘭𝘪𝘵𝘦𝘉𝘰𝘵𝘎𝘭𝘰𝘣𝘢𝘭 -`.trim()
 
     await m.react('🖐🏻')
 
-    try {
-      await conn.sendMessage(m.chat, {
-        image: { url: img },
-        caption: menu,
-        mentions: [m.sender, user]
-      }, { quoted: fkontak })
-    } catch (error) {
-      try {
-        await conn.sendMessage(m.chat, {
-          image: { url: gataMenu.getRandom() },
-          caption: menu,
-          mentions: [m.sender, user]
-        }, { quoted: fkontak })
-      } catch (error) {
-        try {
-          await conn.sendMessage(m.chat, {
-            image: gataImg.getRandom(),
-            caption: menu,
-            mentions: [m.sender, user]
-          }, { quoted: fkontak })
-        } catch (error) {
-          try {
-            await conn.sendFile(m.chat, imagen5, 'menu.jpg', menu, fkontak, false, { mentions: [m.sender, user] })
-          } catch (error) {
-            return
-          }
-        }
-      }
-    }
+    // ✅ Usar el método de envío del tagall - SIN IMAGEN
+    await conn.sendMessage(m.chat, {
+      text: menu,
+      mentions: [m.sender, user]
+    }, { quoted: fkontak })
 
   } catch (e) {
-    await m.reply(
-      `${lenguajeGB?.smsMalError3?.() || '❌ Error'} 👋\n*Hubo un error inesperado.*\n\n💬 *Por favor repórtalo con:* ${usedPrefix}reporte`
-    )
-    console.log(`❗❗ Error en ${usedPrefix + command} ❗❗`)
+    await m.reply(`❌ Error: ${e.message}`)
     console.log(e)
   }
 }
@@ -77,10 +57,3 @@ handler.register = false
 handler.group = true
 
 export default handler
-
-function clockString(ms) {
-  let h = isNaN(ms) ? '--' : Math.floor(ms / 3600000)
-  let m = isNaN(ms) ? '--' : Math.floor(ms / 60000) % 60
-  let s = isNaN(ms) ? '--' : Math.floor(ms / 1000) % 60
-  return [h, m, s].map(v => v.toString().padStart(2, 0)).join(':')
-}
