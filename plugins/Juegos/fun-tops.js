@@ -2,7 +2,12 @@ import util from 'util'
 import path from 'path' 
 
 function handler(m, { groupMetadata, command, usedPrefix, conn }) {
-   let user = a => '@' + a.split('@')[0]
+   // ✅ Función corregida para obtener el @correcto
+   let user = a => {
+      if (!a) return '@unknown'
+      let numero = a.split('@')[0].replace(/\s+/g, '') // Elimina espacios
+      return '@' + numero
+   }
    
    let ps = groupMetadata.participants.map(v => v.id)
    let a = ps.getRandom()
@@ -16,7 +21,7 @@ function handler(m, { groupMetadata, command, usedPrefix, conn }) {
    let i = ps.getRandom()
    let j = ps.getRandom()
 
-   // ✅ Array de menciones para usar en lugar de conn.parseMention()
+   // ✅ Array de menciones con JIDs reales (no números)
    let mentions = [a, b, c, d, e, f, g, h, i, j].filter(Boolean)
 
    if (command == 'topgays') {
@@ -33,7 +38,7 @@ function handler(m, { groupMetadata, command, usedPrefix, conn }) {
 *_8.- 🪂 ${user(h)}_* 🪂
 *_9.- 🪁 ${user(i)}_* 🪁
 *_10.- 🏳️‍🌈 ${user(j)}_* 🏳️‍🌈`
-      m.reply(top, null, { mentions }) // ✅ JID CORREGIDO
+      m.reply(top, null, { mentions })
       conn.sendFile(m.chat, vn, 'error.mp3', null, m, true, {
          type: 'audioMessage', 
          ptt: true 
@@ -54,7 +59,7 @@ function handler(m, { groupMetadata, command, usedPrefix, conn }) {
 *_8.- 🌷 ${user(h)}_* 🌷
 *_9.- 💮 ${user(i)}_* 💮
 *_10.- 🌷 ${user(j)}_* 🌷`
-      m.reply(top, null, { mentions }) // ✅ JID CORREGIDO
+      m.reply(top, null, { mentions })
       conn.sendFile(m.chat, vn, 'otaku.mp3', null, m, true, {
          type: 'audioMessage', 
          ptt: true 
@@ -74,7 +79,7 @@ function handler(m, { groupMetadata, command, usedPrefix, conn }) {
 *_8.- 👑 ${user(h)}_* 👑
 *_9.- 💎 ${user(i)}_* 💎
 *_10.- 👑 ${user(j)}_* 👑`
-      m.reply(top, null, { mentions }) // ✅ JID CORREGIDO
+      m.reply(top, null, { mentions })
    }
    
    if (command == 'toplagrasa' || command == 'topgrasa') {
@@ -90,7 +95,7 @@ function handler(m, { groupMetadata, command, usedPrefix, conn }) {
 *_8.- ._. ${user(h)} ._._*
 *_9.- :V ${user(i)} :V_*
 *_10.- XD ${user(j)} XD_*`
-      m.reply(top, null, { mentions }) // ✅ JID CORREGIDO
+      m.reply(top, null, { mentions })
    }
    
    if (command == 'toppanafrescos' || command == 'toppanafresco') {
@@ -106,7 +111,7 @@ function handler(m, { groupMetadata, command, usedPrefix, conn }) {
 *_8.- 🤜 ${user(h)}_* 🤜
 *_9.- 💪 ${user(i)}_* 💪
 *_10.- 😉 ${user(j)}_* 😉`
-      m.reply(top, null, { mentions }) // ✅ JID CORREGIDO
+      m.reply(top, null, { mentions })
    }
    
    if (command == 'topshiposters' || command == 'topshipost') {
@@ -122,7 +127,7 @@ function handler(m, { groupMetadata, command, usedPrefix, conn }) {
 *_8.- 😨 ${user(h)}_* 😨
 *_9.- 😇 ${user(i)}_* 😇
 *_10.- 🤠 ${user(j)}_* 🤠`
-      m.reply(top, null, { mentions }) // ✅ JID CORREGIDO
+      m.reply(top, null, { mentions })
    }
    
    if (command == 'toppajer@s') {
@@ -138,7 +143,7 @@ function handler(m, { groupMetadata, command, usedPrefix, conn }) {
 *_8.- 🥵 ${user(h)}_* 💦
 *_9.- 🥵 ${user(i)}_* 💦
 *_10.- 🥵 ${user(j)}_* 💦`
-      m.reply(top, null, { mentions }) // ✅ JID CORREGIDO
+      m.reply(top, null, { mentions })
    }
    
    if (command == 'toplind@s' || command == 'toplindos') {
@@ -154,7 +159,7 @@ function handler(m, { groupMetadata, command, usedPrefix, conn }) {
 *_8.- ✨ ${user(h)}_* ✨
 *_9.- ✨ ${user(i)}_* ✨
 *_10.- ✨ ${user(j)}_* ✨`
-      m.reply(top, null, { mentions }) // ✅ JID CORREGIDO
+      m.reply(top, null, { mentions })
    }
    
    if (command == 'topput@s') {
@@ -170,7 +175,7 @@ function handler(m, { groupMetadata, command, usedPrefix, conn }) {
 *_8.- 👉 ${user(h)}_* 👌
 *_9.- 👉 ${user(i)}_* 👌
 *_10.- 👉 ${user(j)}_* 👌`
-      m.reply(top, null, { mentions }) // ✅ JID CORREGIDO
+      m.reply(top, null, { mentions })
    }
    
    if (command == 'topfamosos' || command == 'topfamos@s') {
@@ -186,7 +191,7 @@ function handler(m, { groupMetadata, command, usedPrefix, conn }) {
 *_8.- 🥂 ${user(h)}_* 🥂
 *_9.- 🤩 ${user(i)}_* 🤩
 *_10.- 🛫 ${user(j)}_* 🛫`
-      m.reply(top, null, { mentions }) // ✅ JID CORREGIDO
+      m.reply(top, null, { mentions })
    }
    
    if (command == 'topparejas' || command == 'top5parejas' || command == 'top2parejas') {
@@ -215,7 +220,7 @@ Que hermosa pareja 💖, me invitan a su Boda 🛐
 *_2.- ${user(c)} 💘 ${user(d)}_*  
 🌹 Ustedes se merecen lo mejor del mundo 💞`
       }
-      m.reply(top, null, { mentions }) // ✅ JID CORREGIDO
+      m.reply(top, null, { mentions })
    }
 }
 
