@@ -2,27 +2,24 @@ import util from 'util'
 import path from 'path' 
 
 function handler(m, { groupMetadata, command, usedPrefix, conn }) {
-   // ✅ Función corregida para obtener el @correcto
-   let user = a => {
-      if (!a) return '@unknown'
-      let numero = a.split('@')[0].replace(/\s+/g, '') // Elimina espacios
-      return '@' + numero
-   }
+   // ✅ Función que usa el JID real directamente
+   let user = a => a ? '@' + a.split('@')[0] : '@unknown'
    
    let ps = groupMetadata.participants.map(v => v.id)
-   let a = ps.getRandom()
-   let b = ps.getRandom()
-   let c = ps.getRandom()
-   let d = ps.getRandom()
-   let e = ps.getRandom()
-   let f = ps.getRandom()
-   let g = ps.getRandom()
-   let h = ps.getRandom()
-   let i = ps.getRandom()
-   let j = ps.getRandom()
+   
+   // ✅ Sacar 10 participantes ALEATORIOS (pueden repetirse para grupos pequeños)
+   // En grupos grandes (>100) es casi imposible que se repitan
+   let seleccionados = []
+   for (let i = 0; i < 10; i++) {
+      let randomIndex = Math.floor(Math.random() * ps.length)
+      seleccionados.push(ps[randomIndex])
+   }
+   
+   // ✅ Asignar cada uno a una variable
+   let [a, b, c, d, e, f, g, h, i, j] = seleccionados
 
-   // ✅ Array de menciones con JIDs reales (no números)
-   let mentions = [a, b, c, d, e, f, g, h, i, j].filter(Boolean)
+   // ✅ Array de menciones con los JIDs seleccionados
+   let mentions = seleccionados.filter(Boolean)
 
    if (command == 'topgays') {
       let vn = './media/gay2.mp3'
