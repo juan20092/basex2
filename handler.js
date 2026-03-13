@@ -1765,29 +1765,44 @@ export async function participantsUpdate({ id, participants, action }) {
 case 'remove':
 
 		        
+
 if (chat.welcome) {
 let groupMetadata = await this.groupMetadata(id) || (conn.chats[id] || {}).metadata
 for (let user of participants) {
 let pp = './src/sinfoto.jpg'
+
 try {
 pp = await this.profilePictureUrl(user, 'image')
 } catch (e) {
-} finally {
-let apii = await this.getFile(pp)                                      
+try {
+pp = await this.profilePictureUrl(user, 'preview')
+} catch (e2) {
+pp = './src/sinfoto.jpg'
+}
+}
+
+let apii = await this.getFile(pp)
+
 const botTt2 = groupMetadata.participants.find(u => this.decodeJid(u.id) == this.user.jid) || {} 
 const isBotAdminNn = botTt2?.admin === "admin" || false
-text = (action === 'add' ? (chat.sWelcome || this.welcome || conn.welcome || 'Welcome, @user!').replace('@subject', await this.getName(id)).replace('@desc', groupMetadata.desc?.toString() || '𝑆𝐼𝑁 𝐷𝐸𝑆𝐶𝑅𝐼𝑃𝐶𝐼𝑂́𝑁 ') :
-(chat.sBye || this.bye || conn.bye || 'Bye, @user!')).replace('@user', '@' + user.split('@')[0])
+
+text = (action === 'add'
+? (chat.sWelcome || this.welcome || conn.welcome || 'Welcome, @user!')
+.replace('@subject', await this.getName(id))
+.replace('@desc', groupMetadata.desc?.toString() || '𝑆𝐼𝑁 𝐷𝐸𝑆𝐶𝑅𝐼𝑃𝐶𝐼𝑂́𝑁 ')
+: (chat.sBye || this.bye || conn.bye || 'Bye, @user!')
+).replace('@user', '@' + user.split('@')[0])
 
 
 
 
-	
 if (chat.antifake && isBotAdminNn && action === 'add') {
-const prefijosPredeterminados = [ 2, 4, 6, 7, 234, 9] // Puedes editar que usuarios deseas que se eliminen si empieza por algunos de los números
+const prefijosPredeterminados = [2, 4, 6, 7, 234, 9]
 const rutaArchivo = './prefijos.json'
 let prefijos = []
+
 const existeArchivo = fs.existsSync(rutaArchivo)
+
 if (existeArchivo) {
 try {
 const contenido = fs.readFileSync(rutaArchivo, 'utf-8')
@@ -1795,24 +1810,62 @@ prefijos = JSON.parse(contenido)
 } catch (error) {
 console.log('Error "prefijos.json": ', error)
 return
-}} else {
+}
+} else {
 prefijos = prefijosPredeterminados
 }
-const comienzaConPrefijo = prefijos.some(prefijo => user.startsWith(prefijo.toString()))
+
+const comienzaConPrefijo = prefijos.some(prefijo =>
+user.startsWith(prefijo.toString())
+)
+
 if (comienzaConPrefijo) {
 let texto = mid.mAdvertencia + mid.mFake2(user)
-await conn.sendMessage(id, { text: texto, mentions: [user] })
-let responseb = await conn.groupParticipantsUpdate(id, [user], 'remove')
-if (responseb[0].status === "404") return      
-}}
-	
-let fkontak2 = { "key": { "participants":"0@s.whatsapp.net", "remoteJid": "status@broadcast", "fromMe": false, "id": "Halo" }, "message": { "contactMessage": { "vcard": `BEGIN:VCARD\nVERSION:3.0\nN:Sy;Bot;;;\nFN:y\nitem1.TEL;waid=${user.split('@')[0]}:${user.split('@')[0]}\nitem1.X-ABLabel:Ponsel\nEND:VCARD` }}, "participant": "0@s.whatsapp.net" }      
-conn.sendMessage(id, { image: apii.data, caption: text, mentions: [user]}, { quoted: fkontak2 })  
-//this.sendFile(id, apii.data, 'pp.jpg', text, null, false, { mentions: [user] }, { quoted: fkontak2 })
-}}}
 
-		    
-// copiar hasta aqui para configurar despedida y bienvenida.
+await conn.sendMessage(id, { text: texto, mentions: [user] })
+
+let responseb = await conn.groupParticipantsUpdate(id, [user], 'remove')
+
+if (responseb[0].status === "404") return
+}
+}
+
+
+
+let fkontak2 = {
+"key": {
+"participants": "0@s.whatsapp.net",
+"remoteJid": "status@broadcast",
+"fromMe": false,
+"id": "Halo"
+},
+"message": {
+"contactMessage": {
+"vcard": `BEGIN:VCARD
+VERSION:3.0
+N:Sy;Bot;;;
+FN:y
+item1.TEL;waid=${user.split('@')[0]}:${user.split('@')[0]}
+item1.X-ABLabel:Ponsel
+END:VCARD`
+}
+},
+"participant": "0@s.whatsapp.net"
+}
+
+conn.sendMessage(
+id,
+{ image: apii.data, caption: text, mentions: [user] },
+{ quoted: fkontak2 }
+)
+
+//this.sendFile(id, apii.data, 'pp.jpg', text, null, false, { mentions: [user] }, { quoted: fkontak2 })
+
+}}
+	}
+
+
+			
 
 
 break
