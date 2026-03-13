@@ -3601,10 +3601,6 @@ return list[Math.floor(Math.random() * list.length)]
 }
 }
 
-
-
-// copiar desde aqui para configurar despedida y bienvenida.
-
 export async function participantsUpdate({ id, participants, action }) {
     if (opts['self'])
         return
@@ -3670,76 +3666,87 @@ conn.sendMessage(id, { image: apii.data, caption: text, mentions: [user]}, { quo
 
 		    
 // copiar hasta aqui para configurar despedida y bienvenida.
-			    
+
+
 break
 case 'promote':
 case 'daradmin':
 case 'darpoder':
-text = (chat.sPromote || this.spromote || conn.spromote || '@user ```is now Admin```')
+text = chat.sPromote || this.spromote || conn.spromote || '@user ```is now Admin```'
 case 'demote':
 case 'quitarpoder':
 case 'quitaradmin':
-if (!text)
-text = (chat.sDemote || this.sdemote || conn.sdemote || '@user ```is no longer Admin```')
+if (!text) text = chat.sDemote || this.sdemote || conn.sdemote || '@user ```is no longer Admin```'
 text = text.replace('@user', '@' + participants[0].split('@')[0])
 if (chat.detect)
 //this.sendMessage(id, { text, mentions: this.parseMention(text) })
 break
-}}
+}
+}
 
 /**
  * Handle groups update
- * @param {import('@adiwajshing/baileys').BaileysEventMap<unknown>['groups.update']} groupsUpdate 
+ * @param {import('@adiwajshing/baileys').BaileysEventMap<unknown>['groups.update']} groupsUpdate
  */
 export async function groupsUpdate(groupsUpdate) {
-if (opts['self'] && !isOwner && !isROwner)
-return
+if (opts['self'] && !isOwner && !isROwner) return
 for (const groupUpdate of groupsUpdate) {
 const id = groupUpdate.id
 if (!id) continue
-let chats = global.db.data?.chats?.[id], text = ''
+let chats = global.db.data?.chats?.[id],
+text = ''
 if (!chats?.detect) continue
 // if (groupUpdate.desc) text = (chats.sDesc || this.sDesc || conn.sDesc || '```Description has been changed to```\n@desc').replace('@desc', groupUpdate.desc)
 //if (groupUpdate.subject) text = (chats.sSubject || this.sSubject || conn.sSubject || '```Subject has been changed to```\n@subject').replace('@subject', groupUpdate.subject)
 //if (groupUpdate.icon) text = (chats.sIcon || this.sIcon || conn.sIcon || '```Icon has been changed to```').replace('@icon', groupUpdate.icon)
 //if (groupUpdate.revoke) text = (chats.sRevoke || this.sRevoke || conn.sRevoke || '```Group link has been changed to```\n@revoke').replace('@revoke', groupUpdate.revoke)
 if (!text) continue
-await this.sendMessage(id, { text, mentions: this.parseMention(text) })
-}}
+await this.sendMessage(id, {text, mentions: this.parseMention(text)})
+}
+}
 
 export async function callUpdate(callUpdate) {
-let isAnticall = global.db.data.settings[this.user.jid].antiCall  
+let isAnticall = global.db.data.settings[this.user.jid].antiCall
 if (!isAnticall) return
-for (let nk of callUpdate) { 
+for (let nk of callUpdate) {
 if (nk.isGroup == false) {
-if (nk.status == "offer") {
-let callmsg = await this.reply(nk.from, `${lenguajeGB['smsCont15']()} *@${nk.from.split('@')[0]}*, ${nk.isVideo ? lenguajeGB.smsCont16() : lenguajeGB.smsCont17()} ${lenguajeGB['smsCont18']()}`, false, { mentions: [nk.from] })
+if (nk.status == 'offer') {
+let callmsg = await this.reply(
+nk.from,
+`${lenguajeGB['smsCont15']()} *@${nk.from.split('@')[0]}*, ${nk.isVideo ? lenguajeGB.smsCont16() : lenguajeGB.smsCont17()} ${lenguajeGB['smsCont18']()}`,
+false,
+{mentions: [nk.from]}
+)
 //let data = global.owner.filter(([id, isCreator]) => id && isCreator)
 //await this.sendContact(nk.from, data.map(([id, name]) => [id, name]), false, { quoted: callmsg })
 await this.updateBlockStatus(nk.from, 'block')
-}}}}
+}
+}
+}
+}
 
 export async function deleteUpdate(message) {
 try {
-const { fromMe, id, participant, remoteJid } = message
-if (fromMe) return 
+const {fromMe, id, participant, remoteJid} = message
+if (fromMe) return
 let msg = this.serializeM(this.loadMessage(id))
 console.log(msg)
 let chat = global.db.data.chats[msg?.chat] || {}
-if (!chat?.delete) return 
-if (!msg) return 
+if (!chat?.delete) return
+if (!msg) return
 let isGroup = remoteJid.endsWith('@g.us')
 let isPrivate = !isGroup && remoteJid.endsWith('@s.whatsapp.net')
 if (!isGroup && !isPrivate) return
 const antideleteMessage = `*╭━━⬣ ${lenguajeGB['smsCont19']()} ⬣━━ 𓃠*
 ${lenguajeGB['smsCont20']()} @${participant.split`@`[0]}
 ${lenguajeGB['smsCont21']()}
-*╰━━━⬣ ${lenguajeGB['smsCont19']()} ⬣━━╯*`.trim();
+*╰━━━⬣ ${lenguajeGB['smsCont19']()} ⬣━━╯*`.trim()
 await this.sendMessage(msg.chat, {text: antideleteMessage, mentions: [participant]}, {quoted: msg})
-this.copyNForward(msg.chat, msg).catch(e => console.log(e, msg))
+this.copyNForward(msg.chat, msg).catch((e) => console.log(e, msg))
 } catch (e) {
 console.error(e)
-}}
+}
+}
 
 global.dfail = (type, m, conn) => {
 let msg = {
@@ -3752,19 +3759,35 @@ private: lenguajeGB['smsPrivate'](),
 admin: lenguajeGB['smsAdmin'](),
 botAdmin: lenguajeGB['smsBotAdmin'](),
 unreg: lenguajeGB['smsUnreg'](),
-restrict: lenguajeGB['smsRestrict'](),
+restrict: lenguajeGB['smsRestrict']()
 }[type]
-	
+
 //if (msg) return m.reply(msg)
-	
-let tg = { quoted: m, userJid: conn.user.jid }
-let prep = generateWAMessageFromContent(m.chat, { extendedTextMessage: { text: msg, contextInfo: { externalAdReply: { title: lenguajeGB.smsAvisoAG().slice(0,-2), body: [wm, '😻 𝗦𝘂𝗽𝗲𝗿 ' + gt + ' 😻', '🌟 centergatabot.gmail.com'].getRandom(), thumbnail: gataImg, sourceUrl: accountsgb }}}}, tg)
-if (msg) return conn.relayMessage(m.chat, prep.message, { messageId: prep.key.id })
+
+let tg = {quoted: m, userJid: conn.user.jid}
+let prep = generateWAMessageFromContent(
+m.chat,
+{
+extendedTextMessage: {
+text: msg,
+contextInfo: {
+externalAdReply: {
+title: lenguajeGB.smsAvisoAG().slice(0, -2),
+body: [wm, '😻 𝗦𝘂𝗽𝗲𝗿 ' + gt + ' 😻', ''].getRandom(),
+thumbnail: gataImg,
+sourceUrl: accountsgb
+}
+}
+}
+},
+tg
+)
+if (msg) return conn.relayMessage(m.chat, prep.message, {messageId: prep.key.id})
 }
 
-const file = global.__filename(import.meta.url, true);
+const file = global.__filename(import.meta.url, true)
 watchFile(file, async () => {
 unwatchFile(file)
-console.log(chalk.redBright('Update \'handler.js\''));
+console.log(chalk.redBright("Update 'handler.js'"))
 //if (global.reloadHandler) console.log(await global.reloadHandler());
 })
