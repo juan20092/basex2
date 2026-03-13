@@ -1,5 +1,4 @@
 let handler = async (m, { conn, text, isROwner, isOwner }) => {
-
 let fkontak = { 
 "key": { 
 "participants":"0@s.whatsapp.net", 
@@ -14,20 +13,16 @@ let fkontak = {
 "participant": "0@s.whatsapp.net" 
 }
 
-// ✅ FIX para que respete ENTER y espacios
-let txt = m.message?.extendedTextMessage?.text || m.text || ''
-txt = txt.replace(/^\.setwelcome\s*/i, '')
-
-if (txt) {
-global.db.data.chats[m.chat].sWelcome = txt
-
-// ✅ CORRECCIÓN: Usar conn.sendMessage con fkontak como quoted
-await conn.sendMessage(m.chat, { text: lenguajeGB.smsSetW() }, { quoted: fkontak })
-
+if (text) {
+global.db.data.chats[m.chat].sWelcome = text
+conn.reply(m.chat, lenguajeGB.smsSetW(), fkontak, m)
+//conn.sendButton(m.chat, wm, lenguajeGB'smsSetW', null, [[lenguajeGB.smsConMenu(), /menu]], fkontak, m)
 } else throw `✦ ¡Hola!
-Te ayudaré a configurar la bienvenida y despedida. 
+Te ayudaré a configurar la bienvenida y despedida.
 
-> Primeramente debes saber que al usar este símbolo (@) te ayuda a etiquetar a la persona , mencionar el grupo e incluir la descripción en este grupo. 
+> Primeramente debes saber que al usar este símbolo (@) te ayuda a etiquetar a la persona , mencionar el grupo e incluir la descripción en este grupo.
+
+
 
 » (@user)
 Para etiquetar a la persona .
@@ -38,7 +33,7 @@ Para mencionar el nombre de este grupo.
 
 💫 Ejemplo Bienvenida:
 
-.setwelcome Bienvenido @user al mejor grupo @subject ,  siéntete en casa. ❤️ 
+.setwelcome Bienvenido @user al mejor grupo @subject ,  siéntete en casa. ❤️
 
 @desc
 
@@ -46,10 +41,8 @@ Para mencionar el nombre de este grupo.
 
 .setbye Adiós Popo 🤡 @user.`
 }
-
-handler.command = ['setwelcome', 'bienvenida'] 
+handler.command = ['setwelcome', 'bienvenida']
 handler.botAdmin = true
 handler.admin = true
 handler.group = true
-
 export default handler
