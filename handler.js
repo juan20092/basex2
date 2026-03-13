@@ -1781,15 +1781,10 @@ let pp = './src/sinfoto.jpg'
 try {
 pp = await this.profilePictureUrl(user, 'image')
 } catch (e) {
-try {
-pp = await this.profilePictureUrl(user, 'preview')
-} catch (e2) {
-pp = './src/sinfoto.jpg'
-}
-}
-
+} finally {
 let apii = await this.getFile(pp)
-	
+
+
 const botTt2 = groupMetadata.participants.find(u => this.decodeJid(u.id) == this.user.jid) || {}
 const isBotAdminNn = botTt2?.admin === "admin" || false
 text = (action === 'add' ? (chat.sWelcome || this.welcome || conn.welcome || 'Welcome, @user!').replace('@subject', await this.getName(id)).replace('@desc', groupMetadata.desc?.toString() || '𝑆𝐼𝑁 𝐷𝐸𝑆𝐶𝑅𝐼𝑃𝐶𝐼𝑂́𝑁 ') :
