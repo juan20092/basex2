@@ -1780,56 +1780,62 @@ text = (action === 'add' ? (chat.sWelcome || this.welcome || conn.welcome || 'We
 (chat.sBye || this.bye || conn.bye || 'Bye, @user!')).replace('@user', '@' + user.split('@')[0])
 */
 
-if (chat.welcome) {
-let groupMetadata = await this.groupMetadata(id) || (conn.chats[id] || {}).metadata
-for (let user of participants) {
-let pp = './src/sinfoto.jpg'
-try {
-pp = await this.profilePictureUrl(user, 'image')
-} catch (e) {
-// Si no tiene foto, usa la imagen por defecto
-} finally {
-let api = await this.getFile(pp)
-const botTt2 = groupMetadata.participants.find(u => this.decodeJid(u.id) === this.user.jid) || {}
-const isBotAdminNn = botTt2.admin === "admin" || false
+export async function participantsUpdate({ id, participants, action }) {
+    if (global.db.data == null) await loadDatabase()
+    let chat = global.db.data.chats[id] || {}
+    let text = ''
+    
+    if (chat.welcome) {
+        let groupMetadata = await this.groupMetadata(id) || (conn.chats[id] || {}).metadata
+        for (let user of participants) {
+            let pp = './src/sinfoto.jpg'
+            try {
+                pp = await this.profilePictureUrl(user, 'image')
+            } catch (e) {
+                // Si no tiene foto, usa la imagen por defecto
+            } finally {
+                let api = await this.getFile(pp)
+                const botTt2 = groupMetadata.participants.find(u => this.decodeJid(u.id) === this.user.jid) || {}
+                const isBotAdminNn = botTt2.admin === "admin" || false
 
-// Preparar el texto del mensaje
-if (action === 'add') {
-text = (chat.sWelcome || this.welcome || conn.welcome || 'Welcome, @user!')
-.replace('@subject', groupMetadata.subject || '')
-.replace('@desc', groupMetadata.desc?.toString() || 'Sin descripción')
-.replace('@user', '@' + user.split('@')[0])
-} else if (action === 'remove') {
-text = (chat.sBye || this.bye || conn.bye || 'Bye, @user!')
-.replace('@user', '@' + user.split('@')[0])
-}
+                if (action === 'add') {
+                    text = (chat.sWelcome || this.welcome || conn.welcome || 'Welcome, @user!')
+                        .replace('@subject', groupMetadata.subject || '')
+                        .replace('@desc', groupMetadata.desc?.toString() || 'Sin descripción')
+                        .replace('@user', '@' + user.split('@')[0])
+                } else if (action === 'remove') {
+                    text = (chat.sBye || this.bye || conn.bye || 'Bye, @user!')
+                        .replace('@user', '@' + user.split('@')[0])
+                }
 
-// Crear fkontak CORRECTAMENTE
-let fkontak = {
-key: {
-fromMe: false,
-participant: '0@s.whatsapp.net',
-remoteJid: 'status@broadcast',
-id: 'H7wAM1bcyU5qxcTz6V1Q' + Date.now()
-},
-message: {
-contactMessage: {
-vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;a;;;\nFN:GataBot\nitem1.TEL;waid=${user.split('@')[0]}:${user.split('@')[0]}\nitem1.X-ABLabel:Mobile\nEND:VCARD`
-}
-},
-participant: '0@s.whatsapp.net'
-}
+                let fkontak = {
+                    key: {
+                        fromMe: false,
+                        participant: '0@s.whatsapp.net',
+                        remoteJid: 'status@broadcast',
+                        id: 'H7wAM1bcyU5qxcTz6V1Q' + Date.now()
+                    },
+                    message: {
+                        contactMessage: {
+                            vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;a;;;\nFN:GataBot\nitem1.TEL;waid=${user.split('@')[0]}:${user.split('@')[0]}\nitem1.X-ABLabel:Mobile\nEND:VCARD`
+                        }
+                    },
+                    participant: '0@s.whatsapp.net'
+                }
 
-// ✅ ENVIAR MENSAJE CON IMAGEN + CAPTION
-await this.sendMessage(id, {
-image: api.data,
-caption: text,
-mentions: [user]
-}, { quoted: fkontak })
+                await this.sendMessage(id, {
+                    image: api.data,
+                    caption: text,
+                    mentions: [user]
+                }, { quoted: fkontak })
+            }
+        }
+    }
+} // ← ESTA ES LA ÚNICA LLAVE DE CIERRE
 
-}
-}
-}
+
+			
+
 
 	
 if (chat.antifake && isBotAdminNn && action === 'add') {
