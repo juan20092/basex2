@@ -1,48 +1,61 @@
-import fetch from 'node-fetch'
-import fs from 'fs'
-import { generarBienvenida, generarDespedida } from './_welcome.js'
+import { db } from '../lib/postgres.js'
 
-const handler = async (m, { conn, command, usedPrefix, text, groupMetadata }) => {
-const value = text ? text.trim() : ''
-const chat = global.db.data.chats[m.chat]
-if (command === 'setgp') {
-return m.reply(`✦ Ingresa la categoría que deseas modificar para tu grupo.\n\n🜸 Categorías disponibles:\n• ${usedPrefix}gpname <nuevo nombre>\n> Cambia el nombre del grupo\n• ${usedPrefix}gpdesc <nueva descripción>\n> Modifica la descripción del grupo\n• ${usedPrefix}gpbanner <imagen>\n> Establece una nueva imagen para el grupo (responde a una imagen)\n• ${usedPrefix}setwelcome <mensaje>\n> Configura el mensaje de bienvenida para nuevos miembros\n• ${usedPrefix}setbye <mensaje>\n> Establece el mensaje de despedida al salir un usuario\n• ${usedPrefix}testwelcome\n> Simula el mensaje de bienvenida\n• ${usedPrefix}testbye\n> Simula el mensaje de despedida`)
+const handler = async (m, { args, command, conn, text }) => {
+if (!text) {
+const tipo = command === 'setwelcome' ? 'bienvenida' : command === 'setbye' ? 'despedida' : command === 'setpromote' ? 'ascenso' : 'degradación'
+
+const variables = ['@user → Menciona al usuario',
+...(command !== 'setpromote' && command !== 'setdemote' ? ['@group → Nombre del grupo'] : []),
+...(command === 'setwelcome' ? ['@desc → Descripción del grupo'] : []),
+...(command === 'setpromote' || command === 'setdemote' ? ['@author → Quien ejecuta la acción'] : [])
+].join('\n• ')
+
+const opciones = (command === 'setwelcome' || command === 'setbye') ? `*Opciones adicionales:*
+• --foto → Para enviar el mensaje con imagen
+• --nofoto → Para enviar solo texto` : ''
+
+const ejemplo = command === 'setwelcome' ? `Hola @user, bienvenido a @group. Lee las reglas: @desc`
+: command === 'setbye' ? `Chao @user, gracias por estar en @group.`
+: command === 'setpromote' ? `@user ha sido promovido por @author.`
+: `@user ha sido degradado por @author.`
+
+return m.reply(`*⚙️ Personaliza el mensaje de ${tipo} del grupo:*
+
+*Puedes usar las siguientes variables:*
+• ${variables}\n${opciones}
+*Ejemplo de uso:*
+➤ /${command} ${ejemplo} --foto`)
 }
-try {
-switch (command) {
-case 'setwelcome': {
-if (!value) return m.reply(`ꕥ Debes enviar un mensaje para establecerlo como mensaje de bienvenida.\n> Puedes usar {usuario} para mencionar al usuario, {grupo} para mencionar el nombre del grupo y {desc} para mencionar la descripción del grupo.\n\n✐ Ejemplo: ${usedPrefix}setwelcome Bienvenido {usuario} a {grupo}!`)
-chat.sWelcome = value
-m.reply(`ꕥ Has establecido el mensaje de bienvenida correctamente.\n> Puedes usar ${usedPrefix}testwelcome para ver cómo se verá el mensaje de bienvenida.`)
-break
+    
+const hasFoto = text.includes('--foto')
+const hasNoFoto = text.includes('--nofoto')
+const cleanText = text.replace('--foto', '').replace('--nofoto', '').trim()
+await db.query(`INSERT INTO group_settings (group_id) VALUES ($1) ON CONFLICT DO NOTHING`, [m.chat])
+
+if (command === 'setwelcome') {
+await db.query(`UPDATE group_settings SET swelcome = $1${hasFoto ? ', photowelcome = true' : ''}${hasNoFoto ? ', photowelcome = false' : ''} WHERE group_id = $2`, [cleanText, m.chat])
+return m.reply(`✅ Mensaje de bienvenida guardado${hasFoto ? ' con imagen' : hasNoFoto ? ' sin imagen' : ''}.`)
 }
-case 'setbye': {
-if (!value) return m.reply(`ꕥ Debes enviar un mensaje para establecerlo como mensaje de despedida.\n> Puedes usar {usuario}, {grupo} y {desc} como variables dinámicas.\n\n✐ Ejemplo: ${usedPrefix}setbye Adiós {usuario}, te extrañaremos en {grupo}!`)
-chat.sBye = value
-m.reply(`ꕥ Has establecido el mensaje de despedida correctamente.\n> Puedes usar ${usedPrefix}testbye para ver cómo se verá el mensaje de despedida.`)
-break
+
+if (command === 'setbye') {
+await db.query(`UPDATE group_settings SET sbye = $1${hasFoto ? ', photobye = true' : ''}${hasNoFoto ? ', photobye = false' : ''} WHERE group_id = $2`, [cleanText, m.chat])
+return m.reply(`✅ Mensaje de despedida guardado${hasFoto ? ' con imagen' : hasNoFoto ? ' sin imagen' : ''}.`)
 }
-case 'testwelcome': {
-if (!chat.sWelcome) return m.reply('⚠︎ No hay mensaje de bienvenida configurado.')
-const { pp: ppWel, caption: captionWel, mentions: mentionsWel } = await generarBienvenida({ conn, userId: m.sender, groupMetadata, chat })
-await conn.sendMessage(m.chat, { image: { url: ppWel }, caption: captionWel, mentions: mentionsWel }, { quoted: m })
-try { fs.unlinkSync(ppWel) } catch {}
-break
+    
+if (command === 'setpromote') {
+await db.query(`UPDATE group_settings SET spromote = $1 WHERE group_id = $2`, [cleanText, m.chat])
+return m.reply("✅ Mensaje de ascenso guardado.")
 }
-case 'testbye': {
-if (!chat.sBye) return m.reply('⚠︎ No hay mensaje de despedida configurado.')
-const { pp: ppBye, caption: captionBye, mentions: mentionsBye } = await generarDespedida({ conn, userId: m.sender, groupMetadata, chat })
-await conn.sendMessage(m.chat, { image: { url: ppBye }, caption: captionBye, mentions: mentionsWel }, { quoted: m })
-try { fs.unlinkSync(ppBye) } catch {}
-break
-}}} catch (e) {
-m.reply(`⚠︎ Se ha producido un problema.\n> El detalle del error se mostrará a continuación. Usa ${usedPrefix}report para informarlo.\n\n${e.message}`)
+
+if (command === 'setdemote') {
+await db.query(`UPDATE group_settings SET sdemote = $1 WHERE group_id = $2`, [cleanText, m.chat])
+return m.reply("✅ Mensaje de degradación guardado.")
 }}
-
-handler.help = ['setwelcome', 'setbye', 'testwelcome', 'testbye']
+handler.help = ['setwelcome <texto>', 'setbye <texto>']
 handler.tags = ['group']
-handler.command = ['setgp', 'setwelcome', 'setbye', 'testwelcome', 'testbye']
-handler.admin = true
+handler.command = ['setwelcome', 'setbye', 'setpromote', 'setdemote']
 handler.group = true
+handler.admin = true
+handler.register = true
 
 export default handler
