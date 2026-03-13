@@ -19,12 +19,10 @@ let txt = m.message?.extendedTextMessage?.text || m.text || ''
 txt = txt.replace(/^\.setwelcome\s*/i, '')
 
 if (txt) {
-
 global.db.data.chats[m.chat].sWelcome = txt
 
-conn.reply(m.chat, lenguajeGB.smsSetW(), fkontak, m)
-
-//conn.sendButton(m.chat, wm, lenguajeGB['smsSetW'](), null, [[lenguajeGB.smsConMenu(), `/menu`]], fkontak, m)
+// ✅ CORRECCIÓN: Usar conn.sendMessage con fkontak como quoted
+await conn.sendMessage(m.chat, { text: lenguajeGB.smsSetW() }, { quoted: fkontak })
 
 } else throw `✦ ¡Hola!
 Te ayudaré a configurar la bienvenida y despedida. 
