@@ -10,13 +10,15 @@ try {
 
 await conn.reply(m.chat, 'Descargando...', m)
 
-let res = await tiktokdl(args[0])
+let api = `https://www.tikwm.com/api/?url=${args[0]}&hd=1`
+let res = await (await fetch(api)).json()
+
 let data = res.data
 
-// 🔥 probar todos los videos posibles
+// 🔥 usar wmplay primero (slides)
 let video =
-data.hdplay ||
 data.wmplay ||
+data.hdplay ||
 data.play
 
 if (video) {
@@ -25,13 +27,35 @@ await conn.sendFile(
 m.chat,
 video,
 "tiktok.mp4",
-"✅ TikTok descargado",
+"✅ TikTok",
 m
 )
 
 } else {
 
-return conn.reply(m.chat, 'No se pudo obtener video', m)
+if (data.images) {
+
+let url = data.images[0]
+
+await conn.sendFile(
+m.chat,
+url,
+"img.jpg",
+"⚠️ TikTok slide no tiene video",
+m
+)
+
+if (data.music) {
+await conn.sendFile(
+m.chat,
+data.music,
+"audio.mp3",
+"",
+m
+)
+}
+
+}
 
 }
 
@@ -49,12 +73,3 @@ handler.help = ['tiktok2 link']
 handler.group = true
 
 export default handler
-
-
-async function tiktokdl(url) {
-
-let api = `https://www.tikwm.com/api/?url=${url}&hd=1`
-let res = await (await fetch(api)).json()
-return res
-
-}
