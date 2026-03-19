@@ -1,25 +1,29 @@
-import fetch from 'node-fetch';
+import fetch from 'node-fetch'
 
 var handler = async (m, { conn, args }) => {
 
 if (!args[0]) {
-return conn.reply(m.chat, 'Pon link', m)
+return conn.reply(m.chat, 'Pon el link de TikTok', m)
 }
 
 try {
 
 await conn.reply(m.chat, 'Descargando...', m)
 
-let api = `https://www.tikwm.com/api/?url=${args[0]}&hd=1`
+let api = `https://tikwm.org/api/?url=${args[0]}`
 let res = await (await fetch(api)).json()
+
+if (!res || !res.data) {
+return conn.reply(m.chat, 'Error en API', m)
+}
 
 let data = res.data
 
-// 🔥 usar wmplay primero (slides)
+// intentar todos los videos posibles
 let video =
-data.wmplay ||
 data.hdplay ||
-data.play
+data.play ||
+data.wmplay
 
 if (video) {
 
@@ -27,25 +31,30 @@ await conn.sendFile(
 m.chat,
 video,
 "tiktok.mp4",
-"✅ TikTok",
+"✅ TikTok descargado",
 m
 )
 
-} else {
+return
+}
 
+// si no hay video mandar imágenes + audio
 if (data.images) {
 
-let url = data.images[0]
+for (let img of data.images) {
 
 await conn.sendFile(
 m.chat,
-url,
+img,
 "img.jpg",
-"⚠️ TikTok slide no tiene video",
+"",
 m
 )
 
+}
+
 if (data.music) {
+
 await conn.sendFile(
 m.chat,
 data.music,
@@ -53,11 +62,14 @@ data.music,
 "",
 m
 )
-}
 
 }
 
+return
+
 }
+
+conn.reply(m.chat, 'No se pudo descargar', m)
 
 } catch (e) {
 
@@ -67,9 +79,9 @@ conn.reply(m.chat, e.message, m)
 
 }
 
-handler.command = ['tiktok2']
+handler.help = ['tiktok2 <link>']
 handler.tags = ['descargas']
-handler.help = ['tiktok2 link']
+handler.command = ['tiktok2']
 handler.group = true
 
 export default handler
