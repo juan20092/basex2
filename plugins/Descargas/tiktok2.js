@@ -19,10 +19,11 @@ return conn.reply(m.chat, 'Error API', m)
 
 let data = res.data
 
+// IMPORTANTE → usar wmplay primero
 let video =
+data.wmplay ||
 data.hdplay ||
-data.play ||
-data.wmplay
+data.play
 
 if (video) {
 
@@ -37,30 +38,15 @@ m
 return
 }
 
+// si no hay video → imágenes + audio
 if (data.images) {
 
 for (let img of data.images) {
-
-await conn.sendFile(
-m.chat,
-img,
-"img.jpg",
-"",
-m
-)
-
+await conn.sendFile(m.chat, img, "img.jpg", "", m)
 }
 
 if (data.music) {
-
-await conn.sendFile(
-m.chat,
-data.music,
-"audio.mp3",
-"",
-m
-)
-
+await conn.sendFile(m.chat, data.music, "audio.mp3", "", m)
 }
 
 return
