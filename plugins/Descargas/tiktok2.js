@@ -10,13 +10,14 @@ try {
 
 await conn.reply(m.chat, 'Descargando...', m)
 
-let api = `https://api.tiklydown.eu.org/api/download?url=${args[0]}`
-let res = await (await fetch(api)).json()
+let res = await tiktokdl(args[0])
+let data = res.data
 
+// 🔥 probar todos los videos posibles
 let video =
-res.video?.noWatermark ||
-res.video?.noWatermark_hd ||
-res.video?.watermark
+data.hdplay ||
+data.wmplay ||
+data.play
 
 if (video) {
 
@@ -30,7 +31,7 @@ m
 
 } else {
 
-conn.reply(m.chat, 'No se pudo descargar', m)
+return conn.reply(m.chat, 'No se pudo obtener video', m)
 
 }
 
@@ -48,3 +49,12 @@ handler.help = ['tiktok2 link']
 handler.group = true
 
 export default handler
+
+
+async function tiktokdl(url) {
+
+let api = `https://www.tikwm.com/api/?url=${url}&hd=1`
+let res = await (await fetch(api)).json()
+return res
+
+}
