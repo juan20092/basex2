@@ -3,23 +3,22 @@ import fetch from 'node-fetch'
 var handler = async (m, { conn, args }) => {
 
 if (!args[0]) {
-return conn.reply(m.chat, 'Pon el link de TikTok', m)
+return conn.reply(m.chat, 'Pon link', m)
 }
 
 try {
 
 await conn.reply(m.chat, 'Descargando...', m)
 
-let api = `https://tikwm.org/api/?url=${args[0]}`
+let api = `https://www.tikwm.com/api/?url=${args[0]}&hd=1`
 let res = await (await fetch(api)).json()
 
-if (!res || !res.data) {
-return conn.reply(m.chat, 'Error en API', m)
+if (!res.data) {
+return conn.reply(m.chat, 'Error API', m)
 }
 
 let data = res.data
 
-// intentar todos los videos posibles
 let video =
 data.hdplay ||
 data.play ||
@@ -31,14 +30,13 @@ await conn.sendFile(
 m.chat,
 video,
 "tiktok.mp4",
-"✅ TikTok descargado",
+"✅ TikTok",
 m
 )
 
 return
 }
 
-// si no hay video mandar imágenes + audio
 if (data.images) {
 
 for (let img of data.images) {
@@ -66,7 +64,6 @@ m
 }
 
 return
-
 }
 
 conn.reply(m.chat, 'No se pudo descargar', m)
@@ -79,9 +76,8 @@ conn.reply(m.chat, e.message, m)
 
 }
 
-handler.help = ['tiktok2 <link>']
-handler.tags = ['descargas']
 handler.command = ['tiktok2']
+handler.tags = ['descargas']
 handler.group = true
 
 export default handler
