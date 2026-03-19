@@ -1,86 +1,71 @@
 import fetch from 'node-fetch';
 
 var handler = async (m, { conn, args }) => {
+
     if (!args[0]) {
-        return conn.reply(m.chat, `Por favor, ingresa un enlace de TikTok.`, m);
+        return conn.reply(m.chat, 'Pon link', m)
     }
 
     try {
-        await conn.reply(
-            m.chat,
-            `✦ ¡Espera por favor!
-Estoy descargando el TikTok...`,
-            m
-        );
 
-        const tiktokData = await tiktokdl(args[0]);
+        await conn.reply(m.chat, 'Descargando...', m)
 
-        if (!tiktokData || !tiktokData.data) {
-            return conn.reply(m.chat, "Error al obtener datos.", m);
-        }
+        let res = await tiktokdl(args[0])
+        let data = res.data
 
-        const data = tiktokData.data;
+        // ✅ usar cualquier video disponible
+        let video =
+            data.hdplay ||
+            data.play ||
+            data.wmplay
 
-        // ✅ PRIMERO verificar imágenes
-        if (data.images && data.images.length > 0) {
-
-            await conn.reply(m.chat, "📸 Enviando imágenes...", m);
-
-            for (let img of data.images) {
-                await conn.sendFile(
-                    m.chat,
-                    img,
-                    "img.jpg",
-                    "",
-                    m
-                );
-            }
-
-            // audio del slide
-            if (data.music) {
-                await conn.sendFile(
-                    m.chat,
-                    data.music,
-                    "audio.mp3",
-                    "🎵 Audio",
-                    m
-                );
-            }
-
-        }
-
-        // ✅ luego video
-        else if (data.play) {
+        if (video) {
 
             await conn.sendFile(
                 m.chat,
-                data.play,
+                video,
                 "tiktok.mp4",
-                "☑️ Video",
+                "✅ TikTok descargado",
                 m
-            );
+            )
 
-        }
+        } else {
 
-        else {
-            return conn.reply(m.chat, "No se pudo descargar.", m);
+            // si no hay video usar imágenes + audio
+            if (data.images) {
+
+                for (let img of data.images) {
+                    await conn.sendFile(m.chat, img, "img.jpg", "", m)
+                }
+
+                if (data.music) {
+                    await conn.sendFile(m.chat, data.music, "audio.mp3", "", m)
+                }
+
+            }
+
         }
 
     } catch (e) {
-        conn.reply(m.chat, `Error: ${e.message}`, m);
+
+        conn.reply(m.chat, e.message, m)
+
     }
-};
 
-handler.help = ['tiktok2 <link>'];
-handler.tags = ['descargas'];
-handler.command = ['tiktok2'];
-handler.group = true;
+}
 
-export default handler;
+handler.command = ['tiktok2']
+handler.tags = ['descargas']
+handler.help = ['tiktok2 link']
+handler.group = true
+
+export default handler
 
 
 async function tiktokdl(url) {
-    let api = `https://www.tikwm.com/api/?url=${url}&hd=1`;
-    let res = await (await fetch(api)).json();
-    return res;
+
+    let api = `https://www.tikwm.com/api/?url=${url}&hd=1`
+    let res = await (await fetch(api)).json()
+    return res
+
 }
