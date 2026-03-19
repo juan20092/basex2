@@ -21,21 +21,8 @@ Estoy descargando el TikTok...`,
 
         const data = tiktokData.data;
 
-        // ✅ SI ES VIDEO NORMAL
-        if (data.play) {
-            await conn.sendFile(
-                m.chat,
-                data.play,
-                "tiktok.mp4",
-                `☑️ Video descargado
-
-© Elite Bot`,
-                m
-            );
-        }
-
-        // ✅ SI ES TIKTOK DE IMÁGENES
-        else if (data.images && data.images.length > 0) {
+        // ✅ PRIMERO verificar imágenes
+        if (data.images && data.images.length > 0) {
 
             await conn.reply(m.chat, "📸 Enviando imágenes...", m);
 
@@ -49,18 +36,33 @@ Estoy descargando el TikTok...`,
                 );
             }
 
-            // ✅ enviar audio
+            // audio del slide
             if (data.music) {
                 await conn.sendFile(
                     m.chat,
                     data.music,
                     "audio.mp3",
-                    "🎵 Audio del TikTok",
+                    "🎵 Audio",
                     m
                 );
             }
 
-        } else {
+        }
+
+        // ✅ luego video
+        else if (data.play) {
+
+            await conn.sendFile(
+                m.chat,
+                data.play,
+                "tiktok.mp4",
+                "☑️ Video",
+                m
+            );
+
+        }
+
+        else {
             return conn.reply(m.chat, "No se pudo descargar.", m);
         }
 
@@ -69,9 +71,9 @@ Estoy descargando el TikTok...`,
     }
 };
 
-handler.help = ['tiktok <link>'];
+handler.help = ['tiktok2 <link>'];
 handler.tags = ['descargas'];
-handler.command = ['tiktok2', 'tt'];
+handler.command = ['tiktok2'];
 handler.group = true;
 
 export default handler;
