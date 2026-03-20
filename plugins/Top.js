@@ -1,29 +1,59 @@
-let handler = async (m, { conn, args, participants }) => {
-if (!db.data.chats[m.chat].economy && m.isGroup) {
-return m.reply(`《✦》Los comandos de *Economía* están desactivados en este grupo.\n\nUn *administrador* puede activarlos con el comando:\n» *${usedPrefix}economy on*`)
-}
-const users = [...new Map(Object.entries(global.db.data.users).map(([jid, data]) => [jid, { ...data, jid }])).values()]
-const sorted = users.sort((a, b) => ((b.coin || 0) + (b.bank || 0)) - ((a.coin || 0) + (a.bank || 0)))
-const totalPages = Math.ceil(sorted.length / 10)
-const page = Math.max(1, Math.min(parseInt(args[0]) || 1, totalPages))
-const startIndex = (page - 1) * 10
-const endIndex = startIndex + 10
-let text = `「✿」Los usuarios con más *${currency}* son:\n\n`
-const slice = sorted.slice(startIndex, endIndex)
-for (let i = 0; i < slice.length; i++) {
-const { jid, coin, bank } = slice[i]
-const total = (coin || 0) + (bank || 0)
-let name = await (async () => global.db.data.users[jid].name.trim() || (await conn.getName(jid).then(n => typeof n === 'string' && n.trim() ? n : jid.split('@')[0]).catch(() => jid.split('@')[0])))()
-text += `✰ ${startIndex + i + 1} » *${name}:*\n`
-text += `\t\t Total→ *¥${total.toLocaleString()} ${currency}*\n`
-}
-text += `\n> • Página *${page}* de *${totalPages}*`
-await conn.reply(m.chat, text.trim(), m, { mentions: conn.parseMention(text) })
+async function handler(m, { conn, text, participants, usedPrefix }) {
+
+    if (!m.isGroup) return m.reply('❌ Solo en grupos')
+
+    if (!text) {
+        return m.reply(`Uso:\n${usedPrefix}top feos`)
+    }
+
+    if (!participants) {
+        return m.reply('❌ No hay participantes')
+    }
+
+    // ✅ ids reales del grupo
+    let members = participants
+        .map(p => p.id || p.jid)
+        .filter(v => v && v.endsWith('@s.whatsapp.net'))
+
+    // quitar repetidos
+    members = [...new Set(members)]
+
+    if (members.length < 10) {
+        return m.reply(`Solo hay ${members.length} miembros`)
+    }
+
+    // mezclar seguro
+    let shuffled = members
+        .map(x => ({ x, r: Math.random() }))
+        .sort((a, b) => a.r - b.r)
+        .map(a => a.x)
+
+    let winners = shuffled.slice(0, 10)
+
+    let user = id => '@' + id.split('@')[0]
+
+    function pickRandom(list) {
+        return list[Math.floor(Math.random() * list.length)]
+    }
+
+    let emoji = pickRandom(['🏆','🔥','💀','👀','🤡','🎮','👑','💩','😂'])
+
+    let top = `*${emoji} TOP 10 ${text.toUpperCase()}*\n\n`
+
+    for (let i = 0; i < winners.length; i++) {
+        top += `${i + 1}. ${user(winners[i])}\n`
+    }
+
+    await conn.reply(
+        m.chat,
+        top,
+        m,
+        { mentions: winners }
+    )
 }
 
-handler.help = ['baltop']
-handler.tags = ['rpg']
-handler.command = ['baltop', 'eboard', 'economyboard']
+handler.command = ['topp']
 handler.group = true
+handler.tags = ['fun']
 
 export default handler
