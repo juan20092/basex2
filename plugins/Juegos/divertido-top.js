@@ -55,7 +55,7 @@ let handler = async (m, { conn, text, usedPrefix }) => {
 `
 
     for (let i = 0; i < 10; i++) {
-        top += `*${numeros[i]} ${user(winners[i])}* → ${pickRandom(frases[i])}\n`
+        top += `${numeros[i]} ${user(winners[i])} → ${pickRandom(frases[i])}\n`
     }
 
     top += `\n🎮 Ranking oficial del grupo`
