@@ -1,27 +1,28 @@
-async function handler(m, { conn, groupMetadata, text, usedPrefix }) {
+async function handler(m, { conn, text, usedPrefix }) {
+
+    if (!m.isGroup) return m.reply('❌ Solo en grupos')
 
     if (!text) {
         return m.reply(`🎮 Uso:\n${usedPrefix}top <texto>\nEjemplo:\n${usedPrefix}top feos`)
     }
 
-    if (!groupMetadata || !groupMetadata.participants) {
-        return m.reply('❌ No se pudo obtener la lista del grupo')
+    // ✅ obtener metadata real del grupo (NO la del handler)
+    let metadata = await conn.groupMetadata(m.chat)
+
+    if (!metadata || !metadata.participants) {
+        return m.reply('❌ No se pudo obtener el grupo')
     }
 
-    // ✅ obtener solo ids reales del grupo
-    let members = []
-
-    for (let p of groupMetadata.participants) {
-        if (p.id && p.id.endsWith('@s.whatsapp.net')) {
-            members.push(p.id)
-        }
-    }
+    // ✅ ids reales
+    let members = metadata.participants
+        .map(p => p.id)
+        .filter(id => id && id.endsWith('@s.whatsapp.net'))
 
     // ✅ quitar repetidos
     members = [...new Set(members)]
 
     if (members.length < 10) {
-        return m.reply('🚫 No hay suficientes miembros para hacer un top 10.')
+        return m.reply(`🚫 Solo hay ${members.length} miembros, no se puede hacer top 10`)
     }
 
     // ✅ mezclar sin bug
@@ -34,20 +35,18 @@ async function handler(m, { conn, groupMetadata, text, usedPrefix }) {
 
     let user = id => '@' + id.split('@')[0]
 
-    let emojiList = ['🏆','🔥','💀','👀','🤡','🎮','👑','💩','🍑','😂']
-
     function pickRandom(list) {
         return list[Math.floor(Math.random() * list.length)]
     }
 
-    let emoji = pickRandom(emojiList)
+    let emoji = pickRandom(['🏆','🔥','💀','👀','🤡','🎮','👑','💩','🍑','😂'])
 
-    let groupName = groupMetadata.subject || "ESTE GRUPO"
+    let groupName = metadata.subject || "GRUPO"
 
     const frasesTop = {
-        1: ["¡El nº1 indiscutible! 👑", "¡Leyenda! 🏆", "¡Imparable! 😎"],
-        2: ["¡Casi gana! 🥈", "¡Muy cerca! 🔥", "Buen puesto 😎"],
-        3: ["Bronce pero poderoso 🥉", "Top 3 😎", "Nada mal 😂"]
+        1: ["¡El nº1! 👑","¡Leyenda!","¡Imparable!"],
+        2: ["¡Casi gana!","Buen puesto","Muy cerca"],
+        3: ["Bronce","Top 3","Nada mal"]
     }
 
     let top = `*${emoji} TOP 10 ${text.toUpperCase()}*
@@ -64,7 +63,7 @@ async function handler(m, { conn, groupMetadata, text, usedPrefix }) {
 *_9.- 🔥 ${user(winners[8])}_*
 *_10.- 🔥 ${user(winners[9])}_*
 
-*Ranking oficial del grupo* 🎮`
+*Ranking oficial* 🎮`
 
     await conn.sendMessage(
         m.chat,
@@ -73,9 +72,9 @@ async function handler(m, { conn, groupMetadata, text, usedPrefix }) {
     )
 }
 
-handler.help = ['top <texto>']
-handler.tags = ['fun']
 handler.command = ['top']
 handler.group = true
+handler.tags = ['fun']
+handler.help = ['top <texto>']
 
 export default handler
