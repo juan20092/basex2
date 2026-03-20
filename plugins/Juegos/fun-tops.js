@@ -6,21 +6,14 @@ function handler(m, { groupMetadata, command, usedPrefix, conn }) {
    let participants = groupMetadata.participants
    let ps = participants.map(v => v.id)
    
-   // ✅ Seleccionar 10 ALEATORIOS (como en tagall pero con random)
-   let getRandomParticipant = () => ps[Math.floor(Math.random() * ps.length)]
+   // ✅ CORREGIDO: Mezclar y tomar 10 ÚNICOS (sin repeticiones)
+   let shuffled = [...ps].sort(() => Math.random() - 0.5)
+   let winners = shuffled.slice(0, 10)
    
-   let a = getRandomParticipant()
-   let b = getRandomParticipant()
-   let c = getRandomParticipant()
-   let d = getRandomParticipant()
-   let e = getRandomParticipant()
-   let f = getRandomParticipant()
-   let g = getRandomParticipant()
-   let h = getRandomParticipant()
-   let i = getRandomParticipant()
-   let j = getRandomParticipant()
+   // ✅ Asignar los 10 ganadores a variables
+   let [a, b, c, d, e, f, g, h, i, j] = winners
 
-   // ✅ Array de menciones con los JIDs reales (como en tagall)
+   // ✅ Array de menciones con los JIDs reales
    let mentions = [a, b, c, d, e, f, g, h, i, j].filter(Boolean)
 
    if (command == 'topgays') {
@@ -230,117 +223,4 @@ handler.tags = ['games']
 handler.command = ['topgays', 'topotakus', 'topintegrantes', 'topintegrante', 'toplagrasa', 'topgrasa', 'toppanafrescos', 'toppanafresco', 'topshiposters', 'topshipost', 'toppajer@s', 'toplindos', 'toplind@s', 'topput@s', 'topfamosos', 'topfamos@s', 'topparejas', 'top5parejas']
 handler.group = true
 
-export default handler   if (command == 'topshiposters' || command == 'topshipost') {
-      let top = `*_😱TOP 10 SHIPOSTERS DEL GRUPO😱_* 
-    
-*_1.- 😈 @${a.split('@')[0]}_* 😈
-*_2.- 🤙 @${b.split('@')[0]}_* 🤙
-*_3.- 🥶 @${c.split('@')[0]}_* 🥶
-*_4.- 🤑 @${d.split('@')[0]}_* 🤑
-*_5.- 🥵 @${e.split('@')[0]}_* 🥵
-*_6.- 🤝 @${f.split('@')[0]}_* 🤝
-*_7.- 😟 @${g.split('@')[0]}_* 😟
-*_8.- 😨 @${h.split('@')[0]}_* 😨
-*_9.- 😇 @${i.split('@')[0]}_* 😇
-*_10.- 🤠 @${j.split('@')[0]}_* 🤠`
-      m.reply(top, null, { mentions })
-   }
-   
-   if (command == 'toppajer@s') {
-      let top = `*_😏TOP L@S MAS PAJEROS/AS DEL GRUPO💦_* 
-    
-*_1.- 🥵 @${a.split('@')[0]}_* 💦
-*_2.- 🥵 @${b.split('@')[0]}_* 💦
-*_3.- 🥵 @${c.split('@')[0]}_* 💦
-*_4.- 🥵 @${d.split('@')[0]}_* 💦
-*_5.- 🥵 @${e.split('@')[0]}_* 💦
-*_6.- 🥵 @${f.split('@')[0]}_* 💦
-*_7.- 🥵 @${g.split('@')[0]}_* 💦
-*_8.- 🥵 @${h.split('@')[0]}_* 💦
-*_9.- 🥵 @${i.split('@')[0]}_* 💦
-*_10.- 🥵 @${j.split('@')[0]}_* 💦`
-      m.reply(top, null, { mentions })
-   }
-   
-   if (command == 'toplind@s' || command == 'toplindos') {
-      let top = `*_😳TOP L@S MAS LIND@S Y SEXIS DEL GRUPO😳_*
-    
-*_1.- ✨ @${a.split('@')[0]}_* ✨
-*_2.- ✨ @${b.split('@')[0]}_* ✨
-*_3.- ✨ @${c.split('@')[0]}_* ✨
-*_4.- ✨ @${d.split('@')[0]}_* ✨
-*_5.- ✨ @${e.split('@')[0]}_* ✨
-*_6.- ✨ @${f.split('@')[0]}_* ✨
-*_7.- ✨ @${g.split('@')[0]}_* ✨
-*_8.- ✨ @${h.split('@')[0]}_* ✨
-*_9.- ✨ @${i.split('@')[0]}_* ✨
-*_10.- ✨ @${j.split('@')[0]}_* ✨`
-      m.reply(top, null, { mentions })
-   }
-   
-   if (command == 'topput@s') {
-      let top = `*_😏TOP L@S MAS PUT@S DEL GRUPO SON🔥_* 
-    
-*_1.- 👉 @${a.split('@')[0]}_* 👌
-*_2.- 👉 @${b.split('@')[0]}_* 👌
-*_3.- 👉 @${c.split('@')[0]}_* 👌
-*_4.- 👉 @${d.split('@')[0]}_* 👌
-*_5.- 👉 @${e.split('@')[0]}_* 👌
-*_6.- 👉 @${f.split('@')[0]}_* 👌
-*_7.- 👉 @${g.split('@')[0]}_* 👌
-*_8.- 👉 @${h.split('@')[0]}_* 👌
-*_9.- 👉 @${i.split('@')[0]}_* 👌
-*_10.- 👉 @${j.split('@')[0]}_* 👌`
-      m.reply(top, null, { mentions })
-   }
-   
-   if (command == 'topfamosos' || command == 'topfamos@s') {
-      let top = `*_🌟TOP PERSONAS FAMOSAS EN EL GRUPO🌟_* 
-    
-*_1.- 🛫 @${a.split('@')[0]}_* 🛫
-*_2.- 🥂 @${b.split('@')[0]}_* 🥂
-*_3.- 🤩 @${c.split('@')[0]}_* 🤩
-*_4.- 🛫 @${d.split('@')[0]}_* 🛫
-*_5.- 🥂 @${e.split('@')[0]}_* 🥂
-*_6.- 🤩 @${f.split('@')[0]}_* 🤩
-*_7.- 🛫 @${g.split('@')[0]}_* 🛫
-*_8.- 🥂 @${h.split('@')[0]}_* 🥂
-*_9.- 🤩 @${i.split('@')[0]}_* 🤩
-*_10.- 🛫 @${j.split('@')[0]}_* 🛫`
-      m.reply(top, null, { mentions })
-   }
-   
-   if (command == 'topparejas' || command == 'top5parejas' || command == 'top2parejas') {
-      let top = `*_😍 Las 5 maravillosas parejas del grupo 😍_*
-    
-*_1.- @${a.split('@')[0]} 💘 @${b.split('@')[0]}_* 
-Que hermosa pareja 💖, me invitan a su Boda 🛐
-
-*_2.- @${c.split('@')[0]} 💘 @${d.split('@')[0]}_*  
-🌹 Ustedes se merecen lo mejor del mundo 💞
-
-*_3.- @${e.split('@')[0]} 💘 @${f.split('@')[0]}_* 
-Tan enamorados 😍, para cuando la familia 🥰
-
-*_4.- @${g.split('@')[0]} 💘 @${h.split('@')[0]}_* 
-💗 Decreto que ustedes son la pareja del Año 💗 
-
-*_5.- @${i.split('@')[0]} 💘 @${j.split('@')[0]}_* 
-Genial! 💝, están de Luna de miel 🥵✨❤️‍🔥`
-      if (command == 'top2parejas') {
-         top = `*_😍 Las 5 maravillosas parejas del grupo 😍_*
-    
-*_1.- @${a.split('@')[0]} 💘 @${b.split('@')[0]}_* 
-Que hermosa pareja 💖, me invitan a su Boda 🛐
-
-*_2.- @${c.split('@')[0]} 💘 @${d.split('@')[0]}_*  
-🌹 Ustedes se merecen lo mejor del mundo 💞`
-      }
-      m.reply(top, null, { mentions })
-   }
-}
-
-handler.help = handler.command = ['topgays', 'topotakus', 'topintegrantes', 'topintegrante', 'toplagrasa', 'topgrasa', 'toppanafrescos', 'toppanafresco', 'topshiposters', 'topshipost', 'toppajer@s', 'toplindos', 'toplind@s', 'topput@s', 'topfamosos', 'topfamos@s', 'topparejas', 'top5parejas' ]
-handler.tags = ['games']
-handler.group = true
 export default handler
