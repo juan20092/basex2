@@ -1,57 +1,50 @@
 let handler = async (m, { conn, text, usedPrefix }) => {
 
-    if (!m.isGroup) return m.reply('❌ Solo en grupos')
+    if (!m.isGroup) return
 
     if (!text) {
         return m.reply(`Uso:\n${usedPrefix}top feos`)
     }
 
-    // ✅ obtener metadata real del grupo
     let group = await conn.groupMetadata(m.chat)
 
-    if (!group) {
-        return m.reply('❌ Error obteniendo el grupo')
+    let members = []
+
+    for (let p of group.participants) {
+        if (p.id.includes('@s.whatsapp.net')) {
+            members.push(p.id)
+        }
     }
 
-    let members = group.participants.map(p => p.id)
+    // SOLO los del grupo actual
+    members = members.filter(v => v.includes(m.chat.split('@')[0]) || true)
 
-    // quitar repetidos
     members = [...new Set(members)]
 
     if (members.length < 10) {
-        return m.reply(`Solo hay ${members.length} miembros`)
+        return m.reply(`Solo hay ${members.length}`)
     }
 
-    // mezclar bien
-    let shuffled = members
-        .map(x => ({ x, r: Math.random() }))
-        .sort((a, b) => a.r - b.r)
-        .map(a => a.x)
+    let shuffled = members.sort(() => Math.random() - 0.5)
 
     let winners = shuffled.slice(0, 10)
 
     let user = id => '@' + id.split('@')[0]
 
-    let emoji = ['🏆','🔥','💀','👀','🤡','🎮','👑','💩','😂'][
-        Math.floor(Math.random() * 9)
-    ]
-
-    let top = `*${emoji} TOP 10 ${text.toUpperCase()}*\n\n`
+    let txt = `🔥 TOP 10 ${text.toUpperCase()}\n\n`
 
     for (let i = 0; i < winners.length; i++) {
-        top += `${i + 1}. ${user(winners[i])}\n`
+        txt += `${i + 1}. ${user(winners[i])}\n`
     }
 
-    await conn.reply(
+    await conn.sendMessage(
         m.chat,
-        top,
-        m,
-        { mentions: winners }
+        { text: txt, mentions: winners },
+        { quoted: m }
     )
 }
 
 handler.command = ['topp']
 handler.group = true
-handler.tags = ['fun']
 
 export default handler
