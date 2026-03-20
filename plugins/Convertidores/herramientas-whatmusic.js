@@ -1,39 +1,63 @@
-import fs from 'fs'
-import acrcloud from 'acrcloud'
-let acr = new acrcloud({
-host: 'identify-eu-west-1.acrcloud.com',
-access_key: 'c33c767d683f78bd17d4bd4991955d81',
-access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu'
-})
+import acrcloud from "acrcloud"
 
-let handler = async (m) => {
+const acr = new acrcloud({ host: "identify-ap-southeast-1.acrcloud.com", access_key: "ee1b81b47cf98cd73a0072a761558ab1", access_secret: "ya9OPe8onFAnNkyf9xMTK8qRyMGmsghfuHrIMmUI" })
+let handler = async (m, { conn, text, usedPrefix, command }) => {
 let q = m.quoted ? m.quoted : m
-let mime = (q.msg || q).mimetype || ''
-if (/audio|video/.test(mime)) {
-if ((q.msg || q).seconds > 20)
-return m.reply(
-'╰⊱⚠️⊱ *𝘼𝘿𝙑𝙀𝙍𝙏𝙀𝙉𝘾𝙄𝘼 | 𝙒𝘼𝙍𝙉𝙄𝙉𝙂* ⊱⚠️⊱╮\n\nEl archivo que carga es demasiado grande, le sugerimos que corte el archivo grande a un archivo más pequeño, 10-20 segundos Los datos de audio son suficientes para identificar'
-)
-await conn.reply(m.chat, wait, m)
-let media = await q.download()
-let ext = mime.split('/')[1]
-fs.writeFileSync(`./tmp/${m.sender}.${ext}`, media)
-let res = await acr.identify(fs.readFileSync(`./tmp/${m.sender}.${ext}`))
-let {code, msg} = res.status
-if (code !== 0) throw msg
-let {title, artists, album, genres, release_date} = res.metadata.music[0]
-let txt = `
-𝙍𝙀𝙎𝙐𝙇𝙏𝘼𝘿𝙊 𝘿𝙀 𝙇𝘼 𝘽𝙐𝙎𝙌𝙐𝙀𝘿𝘼𝙎 
-
-• 📌 𝙏𝙄𝙏𝙐𝙇𝙊: ${title}
-• 👨‍🎤 𝘼𝙍𝙏𝙄𝙎𝙏𝘼: ${artists !== undefined ? artists.map((v) => v.name).join(', ') : 'No encontrado'}
-• 💾 𝘼𝙇𝘽𝙐𝙈: ${album.name || 'No encontrado'}
-• 🌐 𝙂𝙀𝙉𝙀𝙍𝙊: ${genres !== undefined ? genres.map((v) => v.name).join(', ') : 'No encontrado'}
-• 📆 𝙁𝙀𝘾𝙃𝘼 𝘿𝙀 𝙇𝘼𝙉𝙕𝘼𝙈𝙄𝙀𝙉𝙏𝙊: ${release_date || 'No encontrado'}
-`.trim()
-fs.unlinkSync(`./tmp/${m.sender}.${ext}`)
-m.reply(txt)
-} else throw '╰⊱❗️⊱ *𝙇𝙊 𝙐𝙎𝙊́ 𝙈𝘼𝙇 | 𝙐𝙎𝙀𝘿 𝙄𝙏 𝙒𝙍𝙊𝙉𝙂* ⊱❗️⊱╮\n\n𝙍𝙀𝙎𝙋𝙊𝙉𝘿𝘼 𝘼 𝙐𝙉 𝘼𝙐𝘿𝙄𝙊 𝙊 𝙑𝙄𝘿𝙀𝙊'
+if (!q.mimetype || (!q.mimetype.includes("audio") && !q.mimetype.includes("video"))) {
+return m.reply("❀ Por favor, responde al audio del cual deseas buscar el título.")
 }
-handler.command = /^quemusica|quemusicaes|whatmusic$/i
+let buffer = await q.download()
+try {
+await m.react('🕒')
+let data = await whatmusic(buffer)
+if (!data.length) {
+await m.react('✖️')
+return m.reply("✧ No se encontraron datos de la canción")
+}
+let cap = "*乂 ¡SHAZAM - MUSIC! 乂*\n\n"
+for (let result of data) {
+const enlaces = Array.isArray(result.url) ? result.url.filter(x => x) : []
+cap += `✐ Título » ${result.title}\n`
+cap += `✦ Artista » ${result.artist}\n`
+cap += `ⴵ Duración » ${result.duration}\n`
+cap += `🜸 Enlaces » ${enlaces.map(i => `\n${i}`).join("\n")}\n`
+if (enlaces.length) cap += "••••••••••••••••••••••••••••••••••••••\n"
+}
+await conn.relayMessage(m.chat, {
+extendedTextMessage: {
+text: cap,
+contextInfo: {
+externalAdReply: {
+title: '✧ Whats • Music ✧',
+body: dev,
+mediaType: 1,
+previewType: 0,
+renderLargerThumbnail: true,
+thumbnail: await (await fetch('https://raw.githubusercontent.com/The-King-Destroy/Adiciones/main/Contenido/1742781294508.jpeg')).buffer(),
+sourceUrl: redes
+}}}}, { quoted: m })
+await m.react('✔️')
+} catch (error) {
+await m.react('✖️')
+m.reply(`⚠︎ Se ha producido un problema.\n> Usa *${usedPrefix}report* para informarlo.\n\n` + error.message)
+}}
+
+handler.help = ["whatmusic"]
+handler.tags = ["tools"]
+handler.command = ["whatmusic", "shazam"]
+handler.group = true
+
 export default handler
+
+async function whatmusic(buffer) {
+let res = await acr.identify(buffer)
+let data = res?.metadata
+if (!data || !Array.isArray(data.music)) return []
+return data.music.map(a => ({ title: a.title, artist: a.artists?.[0]?.name || "Desconocido", duration: toTime(a.duration_ms), url: Object.keys(a.external_metadata || {}).map(i => i === "youtube" ? "https://youtu.be/" + a.external_metadata[i].vid : i === "deezer" ? "https://www.deezer.com/us/track/" + a.external_metadata[i].track.id : i === "spotify" ? "https://open.spotify.com/track/" + a.external_metadata[i].track.id : "").filter(Boolean) }))
+}
+function toTime(ms) {
+if (!ms || typeof ms !== "number") return "00:00"
+let m = Math.floor(ms / 60000)
+let s = Math.floor((ms % 60000) / 1000)
+return [m, s].map(v => v.toString().padStart(2, "0")).join(":")
+}
