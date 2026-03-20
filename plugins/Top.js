@@ -1,4 +1,4 @@
-async function handler(m, { conn, text, participants, usedPrefix }) {
+let handler = async (m, { conn, text, usedPrefix }) => {
 
     if (!m.isGroup) return m.reply('❌ Solo en grupos')
 
@@ -6,14 +6,14 @@ async function handler(m, { conn, text, participants, usedPrefix }) {
         return m.reply(`Uso:\n${usedPrefix}top feos`)
     }
 
-    if (!participants) {
-        return m.reply('❌ No hay participantes')
+    // ✅ obtener metadata real del grupo
+    let group = await conn.groupMetadata(m.chat)
+
+    if (!group) {
+        return m.reply('❌ Error obteniendo el grupo')
     }
 
-    // ✅ ids reales del grupo
-    let members = participants
-        .map(p => p.id || p.jid)
-        .filter(v => v && v.endsWith('@s.whatsapp.net'))
+    let members = group.participants.map(p => p.id)
 
     // quitar repetidos
     members = [...new Set(members)]
@@ -22,7 +22,7 @@ async function handler(m, { conn, text, participants, usedPrefix }) {
         return m.reply(`Solo hay ${members.length} miembros`)
     }
 
-    // mezclar seguro
+    // mezclar bien
     let shuffled = members
         .map(x => ({ x, r: Math.random() }))
         .sort((a, b) => a.r - b.r)
@@ -32,11 +32,9 @@ async function handler(m, { conn, text, participants, usedPrefix }) {
 
     let user = id => '@' + id.split('@')[0]
 
-    function pickRandom(list) {
-        return list[Math.floor(Math.random() * list.length)]
-    }
-
-    let emoji = pickRandom(['🏆','🔥','💀','👀','🤡','🎮','👑','💩','😂'])
+    let emoji = ['🏆','🔥','💀','👀','🤡','🎮','👑','💩','😂'][
+        Math.floor(Math.random() * 9)
+    ]
 
     let top = `*${emoji} TOP 10 ${text.toUpperCase()}*\n\n`
 
