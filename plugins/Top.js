@@ -6,25 +6,21 @@ let handler = async (m, { conn, text, usedPrefix }) => {
         return m.reply(`Uso:\n${usedPrefix}top feos`)
     }
 
-    let group = await conn.groupMetadata(m.chat)
+    let chat = conn.chats[m.chat]
 
-    let members = []
-
-    for (let p of group.participants) {
-        if (p.id.includes('@s.whatsapp.net')) {
-            members.push(p.id)
-        }
+    if (!chat || !chat.metadata || !chat.metadata.participants) {
+        return m.reply('Error obteniendo miembros del grupo')
     }
 
-    // SOLO los del grupo actual
-    members = members.filter(v => v.includes(m.chat.split('@')[0]) || true)
+    let members = chat.metadata.participants.map(p => p.id)
 
     members = [...new Set(members)]
 
     if (members.length < 10) {
-        return m.reply(`Solo hay ${members.length}`)
+        return m.reply(`Solo hay ${members.length} miembros`)
     }
 
+    // mezclar
     let shuffled = members.sort(() => Math.random() - 0.5)
 
     let winners = shuffled.slice(0, 10)
