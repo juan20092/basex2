@@ -17,10 +17,9 @@ let handler = async (m, { conn, text, usedPrefix }) => {
     participants = [...new Set(participants)]
 
     if (participants.length < 10) {
-        return m.reply(`🚫 No hay suficientes miembros para hacer un top 10`)
+        return m.reply(`🚫 No hay suficientes miembros`)
     }
 
-    // mezclar
     let shuffled = participants.sort(() => Math.random() - 0.5)
 
     let winners = shuffled.slice(0, 10)
@@ -31,31 +30,35 @@ let handler = async (m, { conn, text, usedPrefix }) => {
         return list[Math.floor(Math.random() * list.length)]
     }
 
-    let emoji = pickRandom(['🏆','🔥','💀','👀','🤡','🎮','👑','💩','🍑','😂'])
+    let numeros = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"]
 
-    let groupName = chat.metadata.subject || "ESTE GRUPO"
+    let frases = [
+        ["El más peligroso del grupo 💀","Modo dios activado 😎","Nadie le gana 👑"],
+        ["Casi el primero pero le faltó 😂","Se quedó con ganas 🥈","Respeta al segundo 🔥"],
+        ["Bronce pero con orgullo 🥉","Top 3 confirmado 😎","No está mal eh"],
+        ["Casi entras al podio 🤡","Te faltó poquito 😆","Sigue intentando"],
+        ["Mitad del camino 🥴","Ni bien ni mal","Sobreviviste"],
+        ["Pasando raspando 😹","Te salvaste","De milagro estás aquí"],
+        ["Ya casi te ibas 😭","Por poco último","No te duermas"],
+        ["Uy cuidado 💀","Zona peligrosa","Estás en la cuerda floja"],
+        ["Casi último 🤣","Ya huele a derrota","No te quieren"],
+        ["Último pero participaste 🤡","El grupo te eligió","F en el chat"]
+    ]
 
-    const frasesTop = {
-        1: ["¡El nº1 indiscutible! 👑", "¡Leyenda viviente! 🏆", "¡Imparable! 😎"],
-        2: ["¡Casi gana! 🥈", "¡Muy cerca! 🔥", "Buen puesto 😎"],
-        3: ["Bronce pero poderoso 🥉", "Top 3 😎", "Nada mal 😂"]
-    }
+    let emoji = pickRandom(['🏆','🔥','💀','👀','🤡','🎮','👑','💩','😂'])
+
+    let groupName = chat.metadata.subject || "GRUPO"
 
     let top = `*${emoji} TOP 10 ${text.toUpperCase()}*
 *DE ${groupName.toUpperCase()} ${emoji}*
 
-*_1.- 👑 ${user(winners[0])}_* ${pickRandom(frasesTop[1])}
-*_2.- 🥈 ${user(winners[1])}_* ${pickRandom(frasesTop[2])}
-*_3.- 🥉 ${user(winners[2])}_* ${pickRandom(frasesTop[3])}
-*_4.- 🔥 ${user(winners[3])}_*
-*_5.- 🔥 ${user(winners[4])}_*
-*_6.- 🔥 ${user(winners[5])}_*
-*_7.- 🔥 ${user(winners[6])}_*
-*_8.- 🔥 ${user(winners[7])}_*
-*_9.- 🔥 ${user(winners[8])}_*
-*_10.- 🔥 ${user(winners[9])}_*
+`
 
-*¡Ranking oficial del grupo!* 🎮`
+    for (let i = 0; i < 10; i++) {
+        top += `*${numeros[i]} ${user(winners[i])}* → ${pickRandom(frases[i])}\n`
+    }
+
+    top += `\n🎮 Ranking oficial del grupo`
 
     await conn.sendMessage(
         m.chat,
