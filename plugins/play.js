@@ -1,4 +1,4 @@
-import fetch from "node-fetch"
+/*import fetch from "node-fetch"
 import yts from "yt-search"
 import ytdl from 'ytdl-core'
 import axios from 'axios'
@@ -246,3 +246,4 @@ if (bytes === 0) return 'n/a';
 const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)), 10);
 if (i === 0) resolve(`${bytes} ${sizes[i]}`);
 resolve(`${(bytes / (1024 ** i)).toFixed(1)} ${sizes[i]}`)})};
+*/
