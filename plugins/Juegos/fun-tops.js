@@ -1,111 +1,76 @@
-import fetch from 'node-fetch';
-
-let handler = async (m, { conn, metadata, command, text, participants, usedPrefix }) => {
-    try {
-        // ============================================================
-        // FILTRAR PARTICIPANTES VÁLIDOS (IGUAL QUE EN EL PRIMER CÓDIGO)
-        // ============================================================
-        let validParticipants = metadata.participants
-            .filter(p => p.id && !p.id.includes('newsletter') && !p.id.includes('broadcast') && p.id !== conn.user.jid)
-            .map(p => p.id)
-        
-        if (validParticipants.length === 0) {
-            return m.reply('❌ No hay participantes válidos en el grupo.')
-        }
-        
-        // Función para obtener participantes aleatorios SIN duplicados
-        function getRandomParticipants(count) {
-            let shuffled = [...validParticipants]
-            for (let i = shuffled.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-            }
-            return shuffled.slice(0, count)
-        }
-        
-        // Obtener 10 participantes aleatorios (como en el primer código, pero sin duplicados)
-        let randomParticipants = getRandomParticipants(10)
-        let [a, b, c, d, e, f, g, h, i, j] = randomParticipants
-        
-        // Si no hay suficientes, completar con el sender
-        while (randomParticipants.length < 10) {
-            randomParticipants.push(m.sender)
-        }
-        
-        // ============================================================
-        // COMANDO: amistad / amigorandom
-        // ============================================================
-        if (command == 'amistad' || command == 'amigorandom') {
-            let textMsg = `*🔰 Vamos a hacer algunas amistades 🔰*\n\n*Oye @${a.split('@')[0]} hablale al privado a @${b.split('@')[0]} para que jueguen y se haga una amistad 🙆*\n\n*Las mejores amistades empiezan con un juego 😉*`
-            
-            await conn.sendMessage(m.chat, {
-                text: textMsg,
-                mentions: [a, b]  // ✅ IGUAL QUE EL PRIMER CÓDIGO
-            })
-        }
-        
-        // ============================================================
-        // COMANDO: formarpareja / formarparejas
-        // ============================================================
-        if (command == 'formarpareja' || command == 'formarparejas') {
-            let textMsg = `*@${a.split('@')[0]}, 𝙔𝙖 𝙚𝙨 𝙝𝙤𝙧𝙖 𝙙𝙚 𝙦𝙪𝙚 𝙩𝙚 💍 𝘾𝙖𝙨𝙚𝙨 𝙘𝙤𝙣 @${b.split('@')[0]}, 𝙇𝙞𝙣𝙙𝙖 𝙋𝙖𝙧𝙚𝙟𝙖 😉💓*`
-            
-            await conn.sendMessage(m.chat, {
-                text: textMsg,
-                mentions: [a, b]  // ✅ IGUAL QUE EL PRIMER CÓDIGO
-            })
-        }
-        
-        // ============================================================
-        // COMANDO: personalidad (CORREGIDO)
-        // ============================================================
-        if (command == 'personalidad') {
-            let user = m.mentionedJid[0] || m.quoted?.sender || m.sender
-            
-            // Verificar que el usuario exista en el grupo
-            if (!validParticipants.includes(user) && user !== m.sender) {
-                return m.reply(`⚠️ El usuario @${user.split('@')[0]} no está en el grupo o no es válido.`, null, { mentions: [user] })
-            }
-            
-            let userName = user.split('@')[0]
-            
-            let personalidad = `┏━━°❀❬ *PERSONALIDAD* ❭❀°━━┓
-*┃*
-*┃• Nombre* : @${userName}
-*┃• Buena Moral* : ${pickRandom(['6%','12%','20%','27%','35%','41%','49%','54%','60%','66%','73%','78%','84%','92%','93%','94%','96%','98.3%','99.7%','99.9%','1%','2.9%','0%','0.4%'])}
-*┃• Mala Moral* : ${pickRandom(['6%','12%','20%','27%','35%','41%','49%','54%','60%','66%','73%','78%','84%','92%','93%','94%','96%','98.3%','99.7%','99.9%','1%','2.9%','0%','0.4%'])}
-*┃• Tipo de persona* : ${pickRandom(['De buen corazón','Arrogante','Tacaño','Generoso','Humilde','Tímido','Cobarde','Entrometido','Cristal','No binarie XD', 'Pendejo'])}
-*┃• Siempre* : ${pickRandom(['Pesado','De malas','Distraido','De molestoso','Chismoso','Pasa jalandosela','De compras','Viendo anime','Chatea en WhatsApp porque esta soltero','Acostado bueno para nada','De mujeriego','En el celular'])}
-*┃• Inteligencia* : ${pickRandom(['6%','12%','20%','27%','35%','41%','49%','54%','60%','66%','73%','78%','84%','92%','93%','94%','96%','98.3%','99.7%','99.9%','1%','2.9%','0%','0.4%'])}
-*┃• Morosidad* : ${pickRandom(['6%','12%','20%','27%','35%','41%','49%','54%','60%','66%','73%','78%','84%','92%','93%','94%','96%','98.3%','99.7%','99.9%','1%','2.9%','0%','0.4%'])}
-*┃• Coraje* : ${pickRandom(['6%','12%','20%','27%','35%','41%','49%','54%','60%','66%','73%','78%','84%','92%','93%','94%','96%','98.3%','99.7%','99.9%','1%','2.9%','0%','0.4%'])}
-*┃• Miedo* : ${pickRandom(['6%','12%','20%','27%','35%','41%','49%','54%','60%','66%','73%','78%','84%','92%','93%','94%','96%','98.3%','99.7%','99.9%','1%','2.9%','0%','0.4%'])}
-*┃• Fama* : ${pickRandom(['6%','12%','20%','27%','35%','41%','49%','54%','60%','66%','73%','78%','84%','92%','93%','94%','96%','98.3%','99.7%','99.9%','1%','2.9%','0%','0.4%'])}
-*┃• Género* : ${pickRandom(['Hombre', 'Mujer', 'Homosexual', 'Bisexual', 'Pansexual', 'Feminista', 'Heterosexual', 'Macho alfa', 'Mujerzona', 'Marimacha', 'Palosexual', 'PlayStationSexual', 'Sr. Manuela', 'Pollosexual'])}
-┗━━━━━━━━━━━━━━━━`
-            
-            await conn.sendMessage(m.chat, {
-                text: personalidad,
-                mentions: [user]  // ✅ IGUAL QUE EL PRIMER CÓDIGO
-            })
-        }
-        
-        // ============================================================
-        // COMANDOS DE PORCENTAJE (gay2, lesbiana, pajero, etc.)
-        // ============================================================
-        const percentageCommands = ['gay2', 'lesbiana', 'pajero', 'pajera', 'puto', 'puta', 'manco', 'manca', 'rata', 'prostituto', 'prostituta']
-        
-        if (percentageCommands.includes(command)) {
-            if (!text && !m.mentionedJid[0] && !m.quoted) 
-                return m.reply(`🤔 𝙋𝙚𝙣𝙙𝙚𝙟𝙤 𝙚𝙩𝙞𝙦𝙪𝙚𝙩𝙖𝙨 𝙖 𝙡𝙖 𝙥𝙚𝙧𝙨𝙤𝙣𝙖 𝙘𝙤𝙣 𝙚𝙡 @Tag`)
-            
-            let user = m.mentionedJid[0] || m.quoted?.sender || m.sender
-            let userName = user.split('@')[0]
-            let percentage = Math.floor(Math.random() * 100) + 1
-            
-            let emoji = {
-                'gay2': '🏳️‍🌈', 'lesbiana': '🏳️‍🌈', 'pajero': '😏💦', 'pajera': '😏💦',
-                'puto': '🔥🥵', 'puta': '🔥🥵', 'manco': '💩', 'manca': '💩',
+let handler = async (m, { conn, command, text, usedPrefix }) => {
+if (!text) return m.reply(`🚩 Etiqueta a una persona.`)
+if (command == 'gay2') {
+conn.reply(m.chat, `
+_*${text.toUpperCase()}* *ES 🏳️‍🌈* *${(500).getRandom()}%* *GAY*_
+`.trim(), m, m.mentionedJid ? {
+mentions: m.mentionedJid
+} : {})}
+if (command == 'lesbiana') {
+conn.reply(m.chat, `
+_*${text.toUpperCase()}* *ES 🏳️‍🌈* *${(500).getRandom()}%* *${command.replace('how', '').toUpperCase()}*_
+`.trim(), m, m.mentionedJid ? {
+mentions: m.mentionedJid
+} : {})} 
+if (command == 'pajero') {
+conn.reply(m.chat, `
+_*${text.toUpperCase()}* *ES 😏💦* *${(500).getRandom()}%* *${command.replace('how', '').toUpperCase()}*_
+`.trim(), m, m.mentionedJid ? {
+mentions: m.mentionedJid
+} : {})}   
+if (command == 'pajera') {
+conn.reply(m.chat, `
+_*${text.toUpperCase()}* *ES 😏💦* *${(500).getRandom()}%* *${command.replace('how', '').toUpperCase()}*_
+`.trim(), m, m.mentionedJid ? {
+mentions: m.mentionedJid
+} : {})}     
+if (command == 'puto') {
+conn.reply(m.chat, `
+_*${text.toUpperCase()}* *ES* *${(500).getRandom()}%* *${command.replace('how', '').toUpperCase()},* *MÁS INFORMACIÓN A SU PRIVADO 🔥🥵 XD*_
+`.trim(), m, m.mentionedJid ? {
+mentions: m.mentionedJid
+} : {})}     
+if (command == 'puta') {
+conn.reply(m.chat, `
+_*${text.toUpperCase()}* *ES* *${(500).getRandom()}%* *${command.replace('how', '').toUpperCase()},* *MÁS INFORMACIÓN A SU PRIVADO 🔥🥵 XD*_
+`.trim(), m, m.mentionedJid ? {
+mentions: m.mentionedJid
+} : {})}   
+if (command == 'manco') {
+conn.reply(m.chat, `
+_*${text.toUpperCase()}* *ES* *${(500).getRandom()}%* *${command.replace('how', '').toUpperCase()} 💩*_
+`.trim(), m, m.mentionedJid ? {
+mentions: m.mentionedJid
+} : {})}
+if (command == 'manca') {
+conn.reply(m.chat, `
+_*${text.toUpperCase()}* *ES* *${(500).getRandom()}%* *${command.replace('how', '').toUpperCase()} 💩*_
+`.trim(), m, m.mentionedJid ? {
+mentions: m.mentionedJid
+} : {})}     
+if (command == 'rata') {
+conn.reply(m.chat, `
+_*${text.toUpperCase()}* *ES* *${(500).getRandom()}%* *${command.replace('how', '').toUpperCase()} 🐁 COME QUESO 🧀*_
+`.trim(), m, m.mentionedJid ? {
+mentions: m.mentionedJid
+} : {})}
+if (command == 'prostituto') {
+conn.reply(m.chat, `
+_*${text.toUpperCase()}* *ES* *${(500).getRandom()}%* *${command.replace('how', '').toUpperCase()} 🫦👅, QUIEN QUIERE DE SUS SERVICIOS? XD*_
+`.trim(), m, m.mentionedJid ? {
+mentions: m.mentionedJid
+} : {})}
+if (command == 'prostituta') {
+conn.reply(m.chat, `
+_*${text.toUpperCase()}* *ES* *${(500).getRandom()}%* *${command.replace('how', '').toUpperCase()} 🫦👅, QUIEN QUIERE DE SUS SERVICIOS? XD*_
+`.trim(), m, m.mentionedJid ? {
+mentions: m.mentionedJid
+} : {})}         
+}
+handler.help = ['gay2', 'lesbiana', 'pajero', 'pajera', 'puto', 'puta', 'manco', 'manca', 'rata', 'prostituta', 'prostituto'].map((v) => v + " *@user*")
+handler.tags = ['fun']
+handler.command = /^gay2|lesbiana|pajero|pajera|puto|puta|manco|manca|rata|prostituta|prostituto/i
+export default handler                'puto': '🔥🥵', 'puta': '🔥🥵', 'manco': '💩', 'manca': '💩',
                 'rata': '🐁', 'prostituto': '🫦👅', 'prostituta': '🫦👅'
             }
             
