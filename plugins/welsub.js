@@ -6,6 +6,9 @@ let handler = m => m
 handler.before = async function (m, { conn, participants, groupMetadata }) {
   if (!m.messageStubType || !m.isGroup) return
 
+  // ❌ BLOQUEAR BOT PRINCIPAL (solo subbots funcionan)
+  if (this.user.jid === global.conn.user.jid) return
+
   const FOTO_PREDETERMINADA = './src/sinfoto2.jpg'
 
   const STICKERS_DESPEDIDA = [
@@ -31,13 +34,13 @@ handler.before = async function (m, { conn, participants, groupMetadata }) {
   let img
   try {
     let pp = await conn.profilePictureUrl(userId, 'image')
-    let res = await fetch(pp, { timeout: 5000 }) // ⏱️ límite
+    let res = await fetch(pp, { timeout: 5000 })
     img = await res.buffer()
   } catch {
     img = null
   }
 
-  // 📷 FOTO POR DEFECTO SI FALLA
+  // 📷 FOTO POR DEFECTO
   if (!img) {
     try {
       img = fs.readFileSync(FOTO_PREDETERMINADA)
