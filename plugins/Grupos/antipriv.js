@@ -7,10 +7,8 @@ export async function before(m, { isOwner, isROwner }) {
   if (!m.message) return true
   if (m.isGroup) return false
 
-  // Evitar errores con texto
   const text = m.text || ''
 
-  // Evitar bloquear comandos internos o juegos
   if (
     text.includes('PIEDRA') ||
     text.includes('PAPEL') ||
@@ -19,40 +17,39 @@ export async function before(m, { isOwner, isROwner }) {
     text.includes('jadibot')
   ) return true
 
-  // ⚙️ CONFIG GATABOT
   let bot = global.db.data.settings[this.user.jid] || {}
 
   if (!bot.antiPrivate) return false
   if (isOwner || isROwner) return false
 
-  let user = m.sender
+  // 🔥 LIMPIAR JID (CLAVE)
+  let rawUser = m.sender
+  let user = rawUser.split(':')[0]
+
   let numero = user.split('@')[0]
 
-  // 📩 RESPUESTA
   await this.sendMessage(m.chat, {
-    text: `🚫 *ACCESO DENEGADO*
+    text: `🚫 *NO PRIVADO*
 
-Hola @${numero}, no puedes escribir al privado del bot.
+Hola @${numero}, no puedes hablar al privado del bot.
 
-Serás bloqueado automáticamente.
-
-📢 Usa comandos en grupos.
+❌ Serás bloqueado automáticamente.
 `,
     mentions: [user]
   }, { quoted: m })
 
-  // ⏳ Espera pequeña (evita bug de bloqueo)
-  await new Promise(res => setTimeout(res, 1500))
+  // ⏳ Delay necesario
+  await new Promise(r => setTimeout(r, 2000))
 
   // 🔥 BLOQUEO REAL
   try {
-    await this.updateBlockStatus(user, "block")
-    console.log("✅ Usuario bloqueado:", user)
+    await this.updateBlockStatus(user, 'block')
+    console.log('✅ Bloqueado:', user)
   } catch (e) {
-    console.log("❌ Error al bloquear:", e)
+    console.log('❌ Error bloqueo:', e)
   }
 
-  // 💾 GUARDAR REGISTRO
+  // 💾 Registro
   let data = []
   if (fs.existsSync(ARCHIVO)) {
     try {
