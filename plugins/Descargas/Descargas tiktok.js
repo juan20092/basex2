@@ -1,7 +1,7 @@
 import axios from 'axios'
 import fg from 'api-dylux'
 import cheerio from 'cheerio'
-import { Tiktok } from '../lib/tiktok.js'
+import { Tiktok } from '../.. /lib/tiktok.js'
 let handler = async (m, {conn, text, args, usedPrefix, command}) => {
 if (!text) throw `${lenguajeGB['smsAvisoMG']()}${mid.smsTikTok2}\n*${usedPrefix + command} https://vm.tiktok.com/ZM6n8r8Dk/*`
 if (!/(?:https:?\/{2})?(?:w{3}|vm|vt|t)?\.?tiktok.com\/([^\s&]+)/gi.test(text)) throw `${lenguajeGB['smsAvisoFG']()}${mid.smsTikTok3}`
