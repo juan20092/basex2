@@ -14,9 +14,9 @@ export async function before(m, { isOwner, isROwner, conn }) {
   if (text.includes("PIEDRA") || text.includes("PAPEL") || text.includes("TIJERA")) return !0;
 
   // Excluir bot
-  if (conn.user.jid === NUMERO_EXCLUIDO) return !0;
+  if (this.user.jid === NUMERO_EXCLUIDO) return !0;
 
-  let bot = global.db.data.settings[conn.user.jid] || {};
+  let bot = global.db.data.settings[this.user.jid] || {};
 
   if (bot.antiPrivate && !isOwner && !isROwner) {
     const userMention = '@' + m.sender.split('@')[0];
@@ -43,7 +43,8 @@ export async function before(m, { isOwner, isROwner, conn }) {
 
     await conn.sendMessage(m.chat, {
       video: { url: videoRandom },
-      caption: `*¡HOLA¡ 👋🏻* ${userMention}\n
+      caption: `*¡HOLA¡ 👋🏻* ${userMention}
+
 Por ordenes de mi creador no está permitido mensajes a mi privado por la cuál tendré que bloquearte. 
 
 *Si quieres adquirir Elite Bot Global ingresa al siguiente link.*
@@ -60,22 +61,27 @@ Por ordenes de mi creador no está permitido mensajes a mi privado por la cuál 
       mentions: [m.sender]
     }, { quoted: m });
 
-    // ✅ CORREGIDO AQUÍ
-    await conn.updateBlockStatus(m.sender, 'block');
+    // ✅ FIX REAL (AQUÍ ESTABA EL ERROR)
+    await this.updateBlockStatus(m.chat, 'block');
 
     const nombre = conn.getName ? await conn.getName(m.sender) : 'Usuario';
     const mensajeTexto = text || '(Mensaje no disponible)';
 
+    // Notificación al grupo
     await conn.sendMessage(GRUPO_NOTIFICACION, {
-      text: `*USUARIO BLOQUEADO* 📵\n\n` +
-            `👤 Nombre: ${nombre}\n` +
-            `📱 Número: @${numero}\n` +
-            `🔗 enlace: wa.me/${numero}\n` +
-            `📆 Fecha: ${fecha}\n\n` +
-            `📩 Mensaje:\n${mensajeTexto}`,
+      text: `*USUARIO BLOQUEADO* 📵
+
+👤 Nombre: ${nombre}
+📱 Número: @${numero}
+🔗 enlace: wa.me/${numero}
+📆 Fecha: ${fecha}
+
+📩 Mensaje:
+${mensajeTexto}`,
       mentions: [m.sender]
     });
 
+    // Registro en JSON
     const registro = {
       nombre,
       numero,
@@ -96,7 +102,7 @@ Por ordenes de mi creador no está permitido mensajes a mi privado por la cuál 
     datos.push(registro);
     fs.writeFileSync(ARCHIVO_REGISTRO, JSON.stringify(datos, null, 2));
 
-    return !0; // opcional pero recomendado
+    return !0;
   }
 
   return !1;
