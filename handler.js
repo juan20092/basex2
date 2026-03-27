@@ -1333,7 +1333,7 @@ m.reply(
 `🚫 *ESTÁ BANEADO(A), NO PUEDE USAR LOS COMANDOS*\n📑 *MOTIVO: ${user.messageSpam === 0 ? 'NO ESPECIFICADO' : user.messageSpam}*\n⚠️ \`\`\`SI ESTE BOT ES CUENTA OFICIAL Y TIENE EVIDENCIA QUE RESPALDE QUE ESTE MENSAJE ES UN ERROR, PUEDE EXPONER SU Caso. `
 )
 
-/*
+
 user.antispam++
 return
 
@@ -1341,13 +1341,13 @@ return
 }
 if (user.antispam2 && isROwner) return
 let time = global.db.data.users[m.sender].spam + 3000
-if (new Date() - global.db.data.users[m.sender].spam < 3000) {
+if (new Date() - global.db.data.users[m.sender].spam < 0) {
 console.log('[ SPAM ]')
 continue
 }
 global.db.data.users[m.sender].spam = new Date() * 1
 }
-*/
+
 	
 let hl = _prefix
 let adminMode = global.db.data.chats[m.chat].modoadmin
