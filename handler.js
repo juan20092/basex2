@@ -1332,10 +1332,12 @@ if (user.antispam > 2) return
 m.reply(
 `🚫 *ESTÁ BANEADO(A), NO PUEDE USAR LOS COMANDOS*\n📑 *MOTIVO: ${user.messageSpam === 0 ? 'NO ESPECIFICADO' : user.messageSpam}*\n⚠️ \`\`\`SI ESTE BOT ES CUENTA OFICIAL Y TIENE EVIDENCIA QUE RESPALDE QUE ESTE MENSAJE ES UN ERROR, PUEDE EXPONER SU Caso. `
 )
+
+/*
 user.antispam++
 return
 
-/*
+
 }
 if (user.antispam2 && isROwner) return
 let time = global.db.data.users[m.sender].spam + 3000
