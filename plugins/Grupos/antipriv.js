@@ -1,34 +1,74 @@
-const comandos = /piedra|papel|tijera|estado|verificar|creadora|bottemporal|grupos|instalarbot|términos|bots|deletebot|eliminarsesion|serbot|verify|registrar|deletesesion|jadibot/i
-export async function before(m, {conn, isAdmin, isBotAdmin, isOwner, isROwner, usedPrefix, command }) {
-if (m.isBaileys && m.fromMe) return !0
-if (m.isGroup) return !1
-if (!m.message) return !0
-const regex = new RegExp(`^${comandos.source}$`, 'i')
-if (regex.test(m.text.toLowerCase().trim())) return !0
+import fs from 'fs'
 
-let chat, user, bot, mensaje
-chat = global.db.data.chats[m.chat]
-user = global.db.data.users[m.sender]
-bot = global.db.data.settings[this.user.jid] || {}
+const ARCHIVO = './bloqueados.json'
 
-if (bot.antiPrivate && !isOwner && !isROwner) {
-if (user.counterPrivate === 0) {
-mensaje = `Hola *@${m.sender.split`@`[0]}*, Esta prohibido usar el bot el privado\n\n🚫NO USAR LOS COMANDO DEL BOT AL PV🚫\n\nPara usar el bot unirte al grupo del oficial del el bot\n${nn}\n\n⚠️ \`\`\`ADVERTENCIA 1/3\`\`\` ⚠️`
-await conn.reply(m.chat, mensaje, m, { mentions: [m.sender] })  
-  
-} else if (user.counterPrivate === 1) {
-let grupos = [ nn, nnn, nnnt, nnntt, nnnttt ].getRandom()
-mensaje = `*Otra vez 🤨 ya que dije no escriba al privado 🫤*\n\n*Para usar el bot unirte al grupo oficial aqui 👇*\n${grupos}\n\n*SI VUELVE A ESCRIBIR SERÁ BLOQUEADO(A)* ‼️\n⚠️ \`\`\`ADVERTENCIA 2/3\`\`\` ⚠️`
-await conn.reply(m.chat, mensaje, m, { mentions: [m.sender] }) 
-  
-} else if (user.counterPrivate === 2) {
-mensaje = `*@${m.sender.split`@`[0]} 🤨, NO ENTIENDE QUE REPITE 3 VECES NO ESCRIBE AL PRIVADO, AHORA SERA BLOQUEADO.*\n\n⚠️ \`\`\`ADVERTENCIA 3/3 \`\`\` ⚠️`
-await conn.reply(m.chat, mensaje, m, { mentions: [m.sender] }) 
-  
-user.counterPrivate = -1
-await this.updateBlockStatus(m.sender, 'block')
-}
-user.counterPrivate++
-}
-return !1
+export async function before(m, { isOwner, isROwner }) {
+  if (m.isBaileys && m.fromMe) return true
+  if (!m.message) return true
+  if (m.isGroup) return false
+
+  // Evitar errores con texto
+  const text = m.text || ''
+
+  // Evitar bloquear comandos internos o juegos
+  if (
+    text.includes('PIEDRA') ||
+    text.includes('PAPEL') ||
+    text.includes('TIJERA') ||
+    text.includes('serbot') ||
+    text.includes('jadibot')
+  ) return true
+
+  // ⚙️ CONFIG GATABOT
+  let bot = global.db.data.settings[this.user.jid] || {}
+
+  if (!bot.antiPrivate) return false
+  if (isOwner || isROwner) return false
+
+  let user = m.sender
+  let numero = user.split('@')[0]
+
+  // 📩 RESPUESTA
+  await this.sendMessage(m.chat, {
+    text: `🚫 *ACCESO DENEGADO*
+
+Hola @${numero}, no puedes escribir al privado del bot.
+
+Serás bloqueado automáticamente.
+
+📢 Usa comandos en grupos.
+`,
+    mentions: [user]
+  }, { quoted: m })
+
+  // ⏳ Espera pequeña (evita bug de bloqueo)
+  await new Promise(res => setTimeout(res, 1500))
+
+  // 🔥 BLOQUEO REAL
+  try {
+    await this.updateBlockStatus(user, "block")
+    console.log("✅ Usuario bloqueado:", user)
+  } catch (e) {
+    console.log("❌ Error al bloquear:", e)
+  }
+
+  // 💾 GUARDAR REGISTRO
+  let data = []
+  if (fs.existsSync(ARCHIVO)) {
+    try {
+      data = JSON.parse(fs.readFileSync(ARCHIVO))
+    } catch {
+      data = []
+    }
+  }
+
+  data.push({
+    numero,
+    fecha: new Date().toLocaleString('es-EC'),
+    mensaje: text
+  })
+
+  fs.writeFileSync(ARCHIVO, JSON.stringify(data, null, 2))
+
+  return true
 }
