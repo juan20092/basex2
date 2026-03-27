@@ -1,345 +1,80 @@
-import fetch from "node-fetch"
-import yts from "yt-search"
-import ytdl from 'ytdl-core'
-import axios from 'axios'
-import { youtubedl, youtubedlv2 } from '@bochilteam/scraper'
+import yts from 'yt-search'
+import fetch from 'node-fetch'
+import { getBuffer } from '../../lib/message.js'
 
-const HTTP_TIMEOUT_MS = 90 * 1000
-const MAX_SECONDS = 90 * 60
+const isYTUrl = (url) => /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/i.test(url)
+async function getVideoInfo(query, videoMatch) {
+  const search = await yts(query)
+  if (!search.all.length) return null
+  const videoInfo = videoMatch ? search.videos.find(v => v.videoId === videoMatch[1]) || search.all[0] : search.all[0]
+  return videoInfo || null
+}
 
-async function fetchJson(url, timeoutMs = HTTP_TIMEOUT_MS) {
-  const ctrl = new AbortController()
-  const t = setTimeout(() => ctrl.abort(), timeoutMs)
-  try {
-    const res = await fetch(url, {
-      method: 'GET',
-      signal: ctrl.signal,
-      headers: { accept: 'application/json', 'user-agent': 'Mozilla/5.0' }
-    })
-    const text = await res.text().catch(() => '')
-    let data = null
+export default {
+  command: ['play', 'mp3', 'ytmp3', 'ytaudio', 'playaudio'],
+  category: 'downloader',
+  run: async (client, m, args, usedPrefix, command) => {
     try {
-      data = text ? JSON.parse(text) : null
-    } catch {
-      data = null
+      if (!args[0]) {
+        return m.reply('《✧》Por favor, menciona el nombre o URL del video que deseas descargar')
+      }
+      const text = args.join(' ')
+      const videoMatch = text.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/)
+      const query = videoMatch ? 'https://youtu.be/' + videoMatch[1] : text
+      let url = query, title = null, thumbBuffer = null
+      try {
+        const videoInfo = await getVideoInfo(query, videoMatch)
+        if (videoInfo) {
+          url = videoInfo.url
+          title = videoInfo.title
+          thumbBuffer = await getBuffer(videoInfo.image)
+          const vistas = (videoInfo.views || 0).toLocaleString()
+          const canal = videoInfo.author?.name || 'Desconocido'
+          const infoMessage = `➩ Descargando › ${title}
+
+> ❖ Canal › *${canal}*
+> ⴵ Duración › *${videoInfo.timestamp || 'Desconocido'}*
+> ❀ Vistas › *${vistas}*
+> ✩ Publicado › *${videoInfo.ago || 'Desconocido'}*
+> ❒ Enlace › *${url}*`
+          await client.sendMessage(m.chat, { image: thumbBuffer, caption: infoMessage }, { quoted: m })
+        }
+      } catch (err) {
+      }
+      const audio = await getAudioFromApis(url)
+      if (!audio?.url) {
+        return m.reply('《✧》 No se pudo descargar el *audio*, intenta más tarde.')
+      }
+      const audioBuffer = await getBuffer(audio.url)
+      await client.sendMessage(m.chat, { audio: audioBuffer, fileName: `${title || 'audio'}.mp3`, mimetype: 'audio/mpeg' }, { quoted: m })
+    } catch (e) {
+      await m.reply(`> An unexpected error occurred while executing command *${usedPrefix + command}*. Please try again or contact support if the issue persists.\n> [Error: *${e.message}*]`)
     }
-    if (!res.ok) {
-      const msg = data?.message || data?.error || text || `HTTP ${res.status}`
-      throw new Error(`HTTP ${res.status}: ${String(msg).slice(0, 400)}`)
-    }
-    if (data == null) throw new Error('Respuesta JSON inválida')
-    return data
-  } finally {
-    clearTimeout(t)
   }
 }
 
-async function fetchBuffer(url, timeoutMs = HTTP_TIMEOUT_MS) {
-  const ctrl = new AbortController()
-  const t = setTimeout(() => ctrl.abort(), timeoutMs)
-  try {
-    const res = await fetch(url, { signal: ctrl.signal, headers: { 'user-agent': 'Mozilla/5.0' } })
-    if (!res.ok) throw new Error(`No se pudo bajar el audio (HTTP ${res.status})`)
-    const ab = await res.arrayBuffer()
-    return Buffer.from(ab)
-  } finally {
-    clearTimeout(t)
+async function getAudioFromApis(url) {
+  const apis = [
+    { api: 'Axi', endpoint: `${global.APIs.axi.url}/down/ytaudio?url=${encodeURIComponent(url)}`, extractor: res => res?.resultado?.url_dl },    
+    { api: 'Ootaizumi', endpoint: `${global.APIs.ootaizumi.url}/downloader/youtube/play?query=${encodeURIComponent(url)}`, extractor: res => res.result?.download },
+    { api: 'Vreden', endpoint: `${global.APIs.vreden.url}/api/v1/download/youtube/audio?url=${encodeURIComponent(url)}&quality=256`, extractor: res => res.result?.download?.url },
+    { api: 'Stellar', endpoint: `${global.APIs.stellar.url}/dl/ytdl?url=${encodeURIComponent(url)}&format=mp3&key=${global.APIs.stellar.key}`, extractor: res => res.result?.download },
+    { api: 'Ootaizumi v2', endpoint: `${global.APIs.ootaizumi.url}/downloader/youtube?url=${encodeURIComponent(url)}&format=mp3`, extractor: res => res.result?.download },
+    { api: 'Vreden v2', endpoint: `${global.APIs.vreden.url}/api/v1/download/play/audio?query=${encodeURIComponent(url)}`, extractor: res => res.result?.download?.url },
+    { api: 'Nekolabs', endpoint: `${global.APIs.nekolabs.url}/downloader/youtube/v1?url=${encodeURIComponent(url)}&format=mp3`, extractor: res => res.result?.downloadUrl },
+    { api: 'Nekolabs v2', endpoint: `${global.APIs.nekolabs.url}/downloader/youtube/play/v1?q=${encodeURIComponent(url)}`, extractor: res => res.result?.downloadUrl }
+  ]
+
+  for (const { api, endpoint, extractor } of apis) {
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 10000)
+      const res = await fetch(endpoint, { signal: controller.signal }).then(r => r.json())
+      clearTimeout(timeout)
+      const link = extractor(res)
+      if (link) return { url: link, api }
+    } catch (e) {}
+    await new Promise(resolve => setTimeout(resolve, 500))
   }
+  return null
 }
-
-function parseDurationToSeconds(d) {
-  if (d == null) return null
-  if (typeof d === 'number' && Number.isFinite(d)) return Math.max(0, Math.floor(d))
-  const s = String(d).trim()
-  if (!s) return null
-  if (/^\d+$/.test(s)) return Math.max(0, parseInt(s, 10))
-  const parts = s.split(':').map((x) => x.trim()).filter(Boolean)
-  if (!parts.length || parts.some((p) => !/^\d+$/.test(p))) return null
-  let sec = 0
-  for (const p of parts) sec = sec * 60 + parseInt(p, 10)
-  return Number.isFinite(sec) ? sec : null
-}
-
-let handler = async (m, { conn, command, args, text, usedPrefix }) => {
-let q, v, yt, dl_url, ttl, size, lolhuman, lolh, n, n2, n3, n4, cap, qu, currentQuality   
-if (!text) throw `✦ ¡Hey! Parece que olvidaste ingresar el nombre de la música de YouTube.\n💫 Ejemplo:\n\n> .play Blessd mirame`
-
-try {
-await m.react('🕓')
-const yt_play = await search(args.join(" "))
-let additionalText = ''
-if (command === 'play') {
-additionalText = ''
-} else if (command === 'play2') {
-additionalText = 'video 🎥'}
-
-const durSec = parseDurationToSeconds(yt_play[0]?.duration?.seconds) ?? 
-                parseDurationToSeconds(yt_play[0]?.seconds) ?? 
-                parseDurationToSeconds(yt_play[0]?.duration) ?? 
-                parseDurationToSeconds(yt_play[0]?.timestamp)
-
-if (durSec && durSec > MAX_SECONDS) {
-await conn.sendMessage(m.chat, { text: `⭐ Audio muy largo.\n> Máximo permitido: ${Math.floor(MAX_SECONDS / 60)} minutos.` }, { quoted: m })
-await m.react('❌')
-return
-}
-
-await conn.sendMessage(m.chat, {
-text: `01:27 ━━━━━━━⬤────── 05:48
-*⇄ㅤ          ◁      ㅤ  ❚❚ㅤ        ▷ㅤ        ↻*
-
-𝙀𝙡𝙞𝙩𝙚 𝘽𝙤𝙩 𝙂𝙡𝙤𝙗𝙖𝙡`, 
-contextInfo: {
-externalAdReply: {
-title: yt_play[0].title,
-body: wm,
-thumbnailUrl: yt_play[0].thumbnail, 
-mediaType: 1,
-showAdAttribution: true,
-renderLargerThumbnail: true
-}}} , { quoted: m })
-
-if (command == 'play') {	
-try {
-await m.react('✅')
-
-const apiUrl = `${global.api.url}/dl/ytmp3v2?url=${encodeURIComponent(yt_play[0].url)}&key=${global.api.key}`
-const apiResp = await fetchJson(apiUrl, HTTP_TIMEOUT_MS)
-
-if (!apiResp?.status || !apiResp?.data?.dl) {
-throw new Error('La API no devolvió un link válido')
-}
-
-const directUrl = String(apiResp.data.dl)
-const audioBuffer = await fetchBuffer(directUrl, HTTP_TIMEOUT_MS)
-
-await conn.sendMessage(m.chat, { 
-audio: audioBuffer, 
-mimetype: 'audio/mpeg',
-fileName: `${yt_play[0].title}.mp3`
-}, { quoted: m })
-
-} catch {
-try {
-
-const apis = [
-`${global.APIs.axi.url}/down/ytaudio?url=${encodeURIComponent(yt_play[0].url)}`,
-`${global.APIs.ootaizumi.url}/downloader/youtube/play?query=${encodeURIComponent(yt_play[0].url)}`,
-`${global.APIs.vreden.url}/api/v1/download/youtube/audio?url=${encodeURIComponent(yt_play[0].url)}&quality=256`,
-`${global.APIs.stellar.url}/dl/ytdl?url=${encodeURIComponent(yt_play[0].url)}&format=mp3&key=${global.APIs.stellar.key}`,
-`${global.APIs.ootaizumi.url}/downloader/youtube?url=${encodeURIComponent(yt_play[0].url)}&format=mp3`,
-`${global.APIs.vreden.url}/api/v1/download/play/audio?query=${encodeURIComponent(yt_play[0].url)}`,
-`${global.APIs.nekolabs.url}/downloader/youtube/v1?url=${encodeURIComponent(yt_play[0].url)}&format=mp3`,
-`${global.APIs.nekolabs.url}/downloader/youtube/play/v1?q=${encodeURIComponent(yt_play[0].url)}`
-]
-
-for (let apiUrl2 of apis) {
-try {
-const res2 = await fetch(apiUrl2)
-const json2 = await res2.json()
-
-let link = json2?.result?.download?.url || 
-           json2?.result?.download || 
-           json2?.result || 
-           json2?.resultado?.url_dl
-
-if (link) {
-await conn.sendMessage(m.chat, { 
-audio: { url: link }, 
-mimetype: 'audio/mpeg' 
-}, { quoted: m })
-return
-}
-} catch {}
-}
-
-throw new Error('Todas las APIs fallaron')
-
-} catch {
-try {
-let searchh = await yts(yt_play[0].url)
-let __res = searchh.all.map(v => v).filter(v => v.type == "video")
-let infoo = await ytdl.getInfo('https://youtu.be/' + __res[0].videoId)
-let ress = await ytdl.chooseFormat(infoo.formats, { filter: 'audioonly' })
-await conn.sendMessage(m.chat, { audio: { url: ress.url }, mimetype: 'audio/mpeg' }, { quoted: m })
-} catch {
-await conn.sendMessage(m.chat, { text: '❌ Error: No se pudo descargar el audio con ningún método disponible.' }, { quoted: m })
-await m.react('❌')
-}}}
-}
-
-if (command == 'play2') {
-try {
-await m.react('✅')
-
-await conn.sendMessage(m.chat, { 
-text: '⏳ ESPERA POR FAVOR ESTOY DESCARGANDO TU VIDEO...' 
-}, { quoted: m })
-
-const apiUrl = `${global.api.url}/dl/ytmp4?url=${encodeURIComponent(yt_play[0].url)}&key=${global.api.key}`
-const apiResp = await fetchJson(apiUrl, HTTP_TIMEOUT_MS)
-
-if (apiResp?.status && apiResp?.data?.dl) {
-await conn.sendMessage(m.chat, { 
-video: { url: apiResp.data.dl }, 
-fileName: `${yt_play[0].title}.mp4`, 
-mimetype: 'video/mp4', 
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] ` 
-}, { quoted: m })
-} else {
-throw new Error('API de video no funcionó')
-}
-} catch {   
-try {  
-const apiUrl2 = `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(yt_play[0].url)}`
-const res2 = await fetch(apiUrl2)
-const json2 = await res2.json()
-
-if (json2?.status && json2?.result) {
-await conn.sendMessage(m.chat, { 
-video: { url: json2.result }, 
-fileName: `${yt_play[0].title}.mp4`, 
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] `, 
-mimetype: 'video/mp4' 
-}, { quoted: m })     
-} else {
-throw new Error('API alternativa de video falló')
-}
-} catch {  
-try {
-let searchh = await yts(yt_play[0].url)
-let __res = searchh.all.map(v => v).filter(v => v.type == "video")
-let infoo = await ytdl.getInfo('https://youtu.be/' + __res[0].videoId)
-let format = ytdl.chooseFormat(infoo.formats, { quality: '18' })
-await conn.sendMessage(m.chat, { 
-video: { url: format.url }, 
-fileName: `${yt_play[0].title}.mp4`, 
-mimetype: 'video/mp4', 
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] ` 
-}, { quoted: m })
-} catch {
-await conn.sendMessage(m.chat, { text: '❌ Error: No se pudo descargar el video con ningún método disponible.' }, { quoted: m })
-await m.react('❌')
-}}}}
-} catch (error) {
-console.error(error)
-await conn.sendMessage(m.chat, { text: `❌ Error general: ${error.message}` }, { quoted: m })
-await m.react('❌')
-}
-}
-handler.command = ['play', 'play2']
-handler.exp = 0
-export default handler
-
-async function search(query, options = {}) {
-const search = await yts.search({ query, hl: "es", gl: "ES", ...options });
-return search.videos};const apiResp = await fetchJson(apiUrl, HTTP_TIMEOUT_MS)
-
-if (!apiResp?.status || !apiResp?.data?.dl) {
-throw new Error('La API no devolvió un link válido')
-}
-
-const directUrl = String(apiResp.data.dl)
-const audioBuffer = await fetchBuffer(directUrl, HTTP_TIMEOUT_MS)
-
-await conn.sendMessage(m.chat, { 
-audio: audioBuffer, 
-mimetype: 'audio/mpeg',
-fileName: `${yt_play[0].title}.mp3`
-}, { quoted: m })
-
-} catch {
-try {
-// fallback original intacto
-const apiUrl2 = `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(yt_play[0].url)}`
-const res2 = await fetch(apiUrl2)
-const json2 = await res2.json()
-
-if (json2?.status && json2?.result) {
-await conn.sendMessage(m.chat, { 
-audio: { url: json2.result }, 
-mimetype: 'audio/mpeg' 
-}, { quoted: m })
-} else {
-throw new Error('API alternativa falló')
-}
-} catch {
-try {
-let searchh = await yts(yt_play[0].url)
-let __res = searchh.all.map(v => v).filter(v => v.type == "video")
-let infoo = await ytdl.getInfo('https://youtu.be/' + __res[0].videoId)
-let ress = await ytdl.chooseFormat(infoo.formats, { filter: 'audioonly' })
-await conn.sendMessage(m.chat, { audio: { url: ress.url }, mimetype: 'audio/mpeg' }, { quoted: m })
-} catch {
-await conn.sendMessage(m.chat, { text: '❌ Error: No se pudo descargar el audio con ningún método disponible.' }, { quoted: m })
-await m.react('❌')
-}}}
-}  
-
-if (command == 'play2') {
-try {
-await m.react('✅')
-
-await conn.sendMessage(m.chat, { 
-text: '⏳ ESPERA POR FAVOR ESTOY DESCARGANDO TU VIDEO...' 
-}, { quoted: m })
-
-// 🔁 TAMBIÉN TE CAMBIÉ LA DE VIDEO (MISMA API)
-const apiUrl = `${global.api.url}/dl/ytmp4?url=${encodeURIComponent(yt_play[0].url)}&key=${global.api.key}`
-const apiResp = await fetchJson(apiUrl, HTTP_TIMEOUT_MS)
-
-if (apiResp?.status && apiResp?.data?.dl) {
-await conn.sendMessage(m.chat, { 
-video: { url: apiResp.data.dl }, 
-fileName: `${yt_play[0].title}.mp4`, 
-mimetype: 'video/mp4', 
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] ` 
-}, { quoted: m })
-} else {
-throw new Error('API de video no funcionó')
-}
-} catch {   
-try {  
-const apiUrl2 = `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(yt_play[0].url)}`
-const res2 = await fetch(apiUrl2)
-const json2 = await res2.json()
-
-if (json2?.status && json2?.result) {
-await conn.sendMessage(m.chat, { 
-video: { url: json2.result }, 
-fileName: `${yt_play[0].title}.mp4`, 
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] `, 
-mimetype: 'video/mp4' 
-}, { quoted: m })     
-} else {
-throw new Error('API alternativa de video falló')
-}
-} catch {  
-try {
-let searchh = await yts(yt_play[0].url)
-let __res = searchh.all.map(v => v).filter(v => v.type == "video")
-let infoo = await ytdl.getInfo('https://youtu.be/' + __res[0].videoId)
-let format = ytdl.chooseFormat(infoo.formats, { quality: '18' })
-await conn.sendMessage(m.chat, { 
-video: { url: format.url }, 
-fileName: `${yt_play[0].title}.mp4`, 
-mimetype: 'video/mp4', 
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] ` 
-}, { quoted: m })
-} catch {
-await conn.sendMessage(m.chat, { text: '❌ Error: No se pudo descargar el video con ningún método disponible.' }, { quoted: m })
-await m.react('❌')
-}}}}
-} catch (error) {
-console.error(error)
-await conn.sendMessage(m.chat, { text: `❌ Error general: ${error.message}` }, { quoted: m })
-await m.react('❌')
-}
-}
-handler.command = ['play', 'play2']
-handler.exp = 0
-export default handler
-
-async function search(query, options = {}) {
-const search = await yts.search({ query, hl: "es", gl: "ES", ...options });
-return search.videos};
