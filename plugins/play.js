@@ -40,7 +40,7 @@ const ctrl = new AbortController()
 const t = setTimeout(() => ctrl.abort(), timeoutMs)
 try {
 const res = await fetch(url, { signal: ctrl.signal, headers: { 'user-agent': 'Mozilla/5.0' } })
-if (!res.ok) throw new Error(`No se pudo bajar el audio (HTTP ${res.status})`)
+if (!res.ok) throw new Error(`No se pudo bajar el archivo (HTTP ${res.status})`)
 const ab = await res.arrayBuffer()
 return Buffer.from(ab)
 } finally {
@@ -61,7 +61,6 @@ for (const p of parts) sec = sec * 60 + parseInt(p, 10)
 return Number.isFinite(sec) ? sec : null
 }
 
-// Función para extraer duración del formato mm:ss
 function durationToSeconds(duration) {
 if (!duration) return null
 const parts = duration.split(':').map(Number)
@@ -75,17 +74,11 @@ return null
 }
 
 let handler = async (m, { conn, command, args, text, usedPrefix }) => {
-let q, v, yt, dl_url, ttl, size, lolhuman, lolh, n, n2, n3, n4, cap, qu, currentQuality
 if (!text) throw `✦ ¡Hey! Parece que olvidaste ingresar el nombre de la música de YouTube.\n💫 Ejemplo:\n\n> .play Blessd mirame`
 
 try {
 await m.react('🕓')
 const yt_play = await search(args.join(" "))
-let additionalText = ''
-if (command === 'play') {
-additionalText = ''
-} else if (command === 'play2') {
-additionalText = 'video 🎥'}
 
 // Verificar duración máxima
 const durSec = parseDurationToSeconds(yt_play[0]?.duration?.seconds) ??
@@ -100,14 +93,11 @@ return
 }
 
 await conn.sendMessage(m.chat, {
-text: `01:27 ━━━━━━━⬤────── 05:48
-⇄ㅤ          ◁      ㅤ  ❚❚ㅤ        ▷ㅤ        ↻
-
-𝙀𝙡𝙞𝙩𝙚 𝘽𝙤𝙩 𝙂𝙡𝙤𝙗𝙖𝙡`,
+text: `🎵 *${yt_play[0].title}* 🎵\n⏱️ Duración: ${yt_play[0].duration?.timestamp || 'Desconocida'}\n\n⬇️ Descargando...`,
 contextInfo: {
 externalAdReply: {
 title: yt_play[0].title,
-body: wm,
+body: wm || 'Elite Bot',
 thumbnailUrl: yt_play[0].thumbnail,
 mediaType: 1,
 showAdAttribution: true,
@@ -117,15 +107,31 @@ renderLargerThumbnail: true
 if (command == 'play') {	
 try {
 await m.react('✅')
-// Usar API gratuita dv-yer-api.online como método principal
-const apiUrl = `https://dv-yer-api.online/ytdlmp3?mode=link&url=${encodeURIComponent(yt_play[0].url)}&quality=128k`
-const apiResp = await fetchJson(apiUrl, HTTP_TIMEOUT_MS)
+console.log('Intentando descargar audio de:', yt_play[0].url)
 
-if (!apiResp?.ok || !apiResp?.download_url_full) {
-throw new Error('La API no devolvió un link válido')
+// Usar API dv-yer-api.online
+const apiUrl = `https://dv-yer-api.online/ytdlmp3?mode=link&url=${encodeURIComponent(yt_play[0].url)}&quality=128k`
+console.log('API URL:', apiUrl)
+
+const apiResp = await fetchJson(apiUrl, HTTP_TIMEOUT_MS)
+console.log('Respuesta API:', JSON.stringify(apiResp, null, 2))
+
+if (!apiResp?.ok) {
+throw new Error('La API respondió con error')
 }
 
-// Verificar duración desde la API si está disponible
+// Construir URL completa para descarga
+let downloadUrl = apiResp.download_url_full || apiResp.direct_url || apiResp.url
+if (downloadUrl && downloadUrl.startsWith('/')) {
+downloadUrl = `https://dv-yer-api.online${downloadUrl}`
+}
+if (!downloadUrl) {
+throw new Error('No se encontró URL de descarga')
+}
+
+console.log('URL de descarga:', downloadUrl)
+
+// Verificar duración
 if (apiResp.duration) {
 const durSecApi = durationToSeconds(apiResp.duration)
 if (durSecApi && durSecApi > MAX_SECONDS) {
@@ -135,7 +141,8 @@ return
 }
 }
 
-const audioBuffer = await fetchBuffer(apiResp.download_url_full, HTTP_TIMEOUT_MS)
+const audioBuffer = await fetchBuffer(downloadUrl, HTTP_TIMEOUT_MS)
+console.log('Audio descargado, tamaño:', audioBuffer.length)
 
 await conn.sendMessage(m.chat, {
 audio: audioBuffer,
@@ -144,9 +151,12 @@ fileName: `${apiResp.filename || yt_play[0].title}.mp3`
 }, { quoted: m })
 
 } catch (error) {
-console.error('Error en API principal:', error)
+console.error('Error en API principal:', error.message)
+await conn.sendMessage(m.chat, { text: `❌ Error con API principal: ${error.message}\n\nIntentando con método alternativo...` }, { quoted: m })
+
 try {
-// Segundo intento con API alternativa (gawrgura)
+// Segundo intento: API alternativa gawrgura
+console.log('Intentando API alternativa...')
 const apiUrl2 = `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(yt_play[0].url)}`
 const res2 = await fetch(apiUrl2)
 const json2 = await res2.json()
@@ -160,17 +170,16 @@ mimetype: 'audio/mpeg'
 throw new Error('API alternativa falló')
 }
 } catch (error2) {
-console.error('Error en API alternativa:', error2)
+console.error('Error en API alternativa:', error2.message)
 try {
-// Tercer intento con ytdl-core (último recurso)
-let searchh = await yts(yt_play[0].url)
-let __res = searchh.all.map(v => v).filter(v => v.type == "video")
-let infoo = await ytdl.getInfo('https://youtu.be/' + __res[0].videoId)
-let ress = await ytdl.chooseFormat(infoo.formats, { filter: 'audioonly' })
+// Tercer intento: ytdl-core
+console.log('Intentando ytdl-core...')
+let infoo = await ytdl.getInfo(yt_play[0].url)
+let ress = ytdl.chooseFormat(infoo.formats, { filter: 'audioonly', quality: 'lowestaudio' })
 await conn.sendMessage(m.chat, { audio: { url: ress.url }, mimetype: 'audio/mpeg' }, { quoted: m })
 } catch (error3) {
-console.error('Error en ytdl-core:', error3)
-await conn.sendMessage(m.chat, { text: '❌ Error: No se pudo descargar el audio con ningún método disponible.' }, { quoted: m })
+console.error('Error en ytdl-core:', error3.message)
+await conn.sendMessage(m.chat, { text: '❌ Error: No se pudo descargar el audio con ningún método disponible.\n\n' + error3.message }, { quoted: m })
 await m.react('❌')
 }}}
 }
@@ -178,32 +187,33 @@ await m.react('❌')
 if (command == 'play2') {
 try {
 await m.react('✅')
-// Mensaje de espera
 await conn.sendMessage(m.chat, {
-text: '⏳ ESPERA POR FAVOR ESTOY DESCARGANDO TU VIDEO...'
+text: '⏳ DESCARGANDO VIDEO...'
 }, { quoted: m })
 
-// Usar API para video (buscando endpoint de video en dv-yer-api)
-// Nota: dv-yer-api también soporta video con /ytdlmp4
 const apiUrl = `https://dv-yer-api.online/ytdlmp4?mode=link&url=${encodeURIComponent(yt_play[0].url)}&quality=360p`
 const apiResp = await fetchJson(apiUrl, HTTP_TIMEOUT_MS)
 
-if (apiResp?.ok && apiResp?.download_url_full) {
-const videoBuffer = await fetchBuffer(apiResp.download_url_full, HTTP_TIMEOUT_MS)
+let downloadUrl = apiResp?.download_url_full || apiResp?.direct_url
+if (downloadUrl && downloadUrl.startsWith('/')) {
+downloadUrl = `https://dv-yer-api.online${downloadUrl}`
+}
+
+if (apiResp?.ok && downloadUrl) {
+const videoBuffer = await fetchBuffer(downloadUrl, HTTP_TIMEOUT_MS)
 await conn.sendMessage(m.chat, {
 video: videoBuffer,
 fileName: `${apiResp.filename || yt_play[0].title}.mp4`,
 mimetype: 'video/mp4',
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] \n\n📌 ${yt_play[0].title}`
+caption: `✅ VIDEO DESCARGADO\n📌 ${yt_play[0].title}`
 }, { quoted: m })
 } else {
 throw new Error('API de video no funcionó')
 }
 
 } catch (error) {
-console.error('Error en API principal de video:', error)
+console.error('Error en video:', error.message)
 try {
-// Intentar con API alternativa de video
 const apiUrl2 = `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(yt_play[0].url)}`
 const res2 = await fetch(apiUrl2)
 const json2 = await res2.json()
@@ -212,174 +222,29 @@ if (json2?.status && json2?.result) {
 await conn.sendMessage(m.chat, {
 video: { url: json2.result },
 fileName: `${yt_play[0].title}.mp4`,
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] \n\n📌 ${yt_play[0].title}`,
+caption: `✅ VIDEO DESCARGADO\n📌 ${yt_play[0].title}`,
 mimetype: 'video/mp4'
-}, { quoted: m })
-} else {
-throw new Error('API alternativa de video falló')
-}
-} catch (error2) {
-console.error('Error en API alternativa de video:', error2)
-try {
-// Último recurso: ytdl-core para video
-let searchh = await yts(yt_play[0].url)
-let __res = searchh.all.map(v => v).filter(v => v.type == "video")
-let infoo = await ytdl.getInfo('https://youtu.be/' + __res[0].videoId)
-let format = ytdl.chooseFormat(infoo.formats, { quality: '18' }) // 360p
-await conn.sendMessage(m.chat, {
-video: { url: format.url },
-fileName: `${yt_play[0].title}.mp4`,
-mimetype: 'video/mp4',
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝙕 𝘾𝙊𝙉 𝙐𝙇𝙏𝙄𝙈𝙊 𝙍𝙀𝘾𝙐𝙍𝙎𝙊 [✅] \n\n📌 ${yt_play[0].title}`
-}, { quoted: m })
-} catch (error3) {
-console.error('Error en ytdl-core video:', error3)
-await conn.sendMessage(m.chat, { text: '❌ Error: No se pudo descargar el video con ningún método disponible.' }, { quoted: m })
-await m.react('❌')
-}}}}
-} catch (error) {
-console.error(error)
-await conn.sendMessage(m.chat, { text: `❌ Error general: ${error.message}` }, { quoted: m })
-await m.react('❌')
-}
-}
-handler.command = ['play', 'play2']
-handler.exp = 0
-export default handler
-
-async function search(query, options = {}) {
-const search = await yts.search({ query, hl: "es", gl: "ES", ...options });
-return search.videos};
-
-function MilesNumber(number) {
-const exp = /(\d)(?=(\d{3})+(?!\d))/g;
-const rep = "$1.";
-let arr = number.toString().split(".");
-arr[0] = arr[0].replace(exp, rep);
-return arr[1] ? arr.join(".") : arr[0]};
-
-function secondString(seconds) {
-seconds = Number(seconds);
-var d = Math.floor(seconds / (3600 * 24));
-var h = Math.floor((seconds % (3600 * 24)) / 3600);
-var m = Math.floor((seconds % 3600) / 60);
-var s = Math.floor(seconds % 60);
-var dDisplay = d > 0 ? d + (d == 1 ? " día, " : " días, ") : "";
-var hDisplay = h > 0 ? h + (h == 1 ? " hora, " : " horas, ") : "";
-var mDisplay = m > 0 ? m + (m == 1 ? " minuto, " : " minutos, ") : "";
-var sDisplay = s > 0 ? s + (s == 1 ? " segundo" : " segundos") : "";
-return dDisplay + hDisplay + mDisplay + sDisplay};
-
-function bytesToSize(bytes) {
-return new Promise((resolve, reject) => {
-const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-if (bytes === 0) return 'n/a';
-const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)), 10);
-if (i === 0) resolve(`${bytes} ${sizes[i]}`);
-resolve(`${(bytes / (1024 ** i)).toFixed(1)} ${sizes[i]}`)})};if (command == 'play') {	}
-try {
-await m.react('✅')
-// Usar API funcional del segundo código
-const apiUrl = `${APINAUFRA}/ytmp3?apikey=${NAUFRA_KEY}&url=${encodeURIComponent(yt_play[0].url)}`
-const audioBuffer = await fetchBuffer(apiUrl, HTTP_TIMEOUT_MS)
-
-await conn.sendMessage(m.chat, {
-audio: audioBuffer,
-mimetype: 'audio/mpeg',
-fileName: `${yt_play[0].title}.mp3`
-}, { quoted: m })
-
-} catch (error) {
-console.error('Error en API principal:', error)
-try {
-// Segundo intento con API alternativa del segundo código (comentada)
-const apiUrl2 = `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(yt_play[0].url)}`
-const res2 = await fetch(apiUrl2)
-const json2 = await res2.json()
-
-if (json2?.status && json2?.result) {
-await conn.sendMessage(m.chat, {
-audio: { url: json2.result },
-mimetype: 'audio/mpeg'
 }, { quoted: m })
 } else {
 throw new Error('API alternativa falló')
 }
 } catch (error2) {
-console.error('Error en API alternativa:', error2)
 try {
-// Tercer intento con ytdl-core (último recurso)
-let searchh = await yts(yt_play[0].url)
-let __res = searchh.all.map(v => v).filter(v => v.type == "video")
-let infoo = await ytdl.getInfo('https://youtu.be/' + __res[0].videoId)
-let ress = await ytdl.chooseFormat(infoo.formats, { filter: 'audioonly' })
-await conn.sendMessage(m.chat, { audio: { url: ress.url }, mimetype: 'audio/mpeg' }, { quoted: m })
-} catch (error3) {
-console.error('Error en ytdl-core:', error3)
-await conn.sendMessage(m.chat, { text: '❌ Error: No se pudo descargar el audio con ningún método disponible.' }, { quoted: m })
-await m.react('❌')
-}}}
-}
-
-if (command == 'play2') {
-try {
-await m.react('✅')
-// Mensaje de espera sin miniatura
-await conn.sendMessage(m.chat, {
-text: '⏳ ESPERA POR FAVOR ESTOY DESCARGANDO TU VIDEO...'
-}, { quoted: m })
-
-// Usar API funcional para video (usando la misma API base pero para video)
-const apiUrl = `${APINAUFRA}/ytmp4?apikey=${NAUFRA_KEY}&url=${encodeURIComponent(yt_play[0].url)}`
-const videoBuffer = await fetchBuffer(apiUrl, HTTP_TIMEOUT_MS)
-
-await conn.sendMessage(m.chat, {
-video: videoBuffer,
-fileName: `${yt_play[0].title}.mp4`,
-mimetype: 'video/mp4',
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] \n\n📌 ${yt_play[0].title}`
-}, { quoted: m })
-
-} catch (error) {
-console.error('Error en API principal de video:', error)
-try {
-// Intentar con API alternativa de video
-const apiUrl2 = `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(yt_play[0].url)}`
-const res2 = await fetch(apiUrl2)
-const json2 = await res2.json()
-
-if (json2?.status && json2?.result) {
-await conn.sendMessage(m.chat, {
-video: { url: json2.result },
-fileName: `${yt_play[0].title}.mp4`,
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] \n\n📌 ${yt_play[0].title}`,
-mimetype: 'video/mp4'
-}, { quoted: m })
-} else {
-throw new Error('API alternativa de video falló')
-}
-} catch (error2) {
-console.error('Error en API alternativa de video:', error2)
-try {
-// Último recurso: ytdl-core para video
-let searchh = await yts(yt_play[0].url)
-let __res = searchh.all.map(v => v).filter(v => v.type == "video")
-let infoo = await ytdl.getInfo('https://youtu.be/' + __res[0].videoId)
-let format = ytdl.chooseFormat(infoo.formats, { quality: '18' }) // 360p
+let infoo = await ytdl.getInfo(yt_play[0].url)
+let format = ytdl.chooseFormat(infoo.formats, { quality: '18' })
 await conn.sendMessage(m.chat, {
 video: { url: format.url },
 fileName: `${yt_play[0].title}.mp4`,
 mimetype: 'video/mp4',
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝙕 𝘾𝙊𝙉 𝙐𝙇𝙏𝙄𝙈𝙊 𝙍𝙀𝘾𝙐𝙍𝙎𝙊 [✅] \n\n📌 ${yt_play[0].title}`
+caption: `✅ VIDEO DESCARGADO (último recurso)\n📌 ${yt_play[0].title}`
 }, { quoted: m })
 } catch (error3) {
-console.error('Error en ytdl-core video:', error3)
-await conn.sendMessage(m.chat, { text: '❌ Error: No se pudo descargar el video con ningún método disponible.' }, { quoted: m })
+await conn.sendMessage(m.chat, { text: '❌ Error: No se pudo descargar el video.' }, { quoted: m })
 await m.react('❌')
 }}}}
 } catch (error) {
-console.error(error)
-await conn.sendMessage(m.chat, { text: `❌ Error general: ${error.message}` }, { quoted: m })
+console.error('Error general:', error)
+await conn.sendMessage(m.chat, { text: `❌ Error: ${error.message}` }, { quoted: m })
 await m.react('❌')
 }
 }
@@ -390,239 +255,3 @@ export default handler
 async function search(query, options = {}) {
 const search = await yts.search({ query, hl: "es", gl: "ES", ...options });
 return search.videos};
-
-function MilesNumber(number) {
-const exp = /(\d)(?=(\d{3})+(?!\d))/g;
-const rep = "$1.";
-let arr = number.toString().split(".");
-arr[0] = arr[0].replace(exp, rep);
-return arr[1] ? arr.join(".") : arr[0]};
-
-function secondString(seconds) {
-seconds = Number(seconds);
-var d = Math.floor(seconds / (3600 * 24));
-var h = Math.floor((seconds % (3600 * 24)) / 3600);
-var m = Math.floor((seconds % 3600) / 60);
-var s = Math.floor(seconds % 60);
-var dDisplay = d > 0 ? d + (d == 1 ? " día, " : " días, ") : "";
-var hDisplay = h > 0 ? h + (h == 1 ? " hora, " : " horas, ") : "";
-var mDisplay = m > 0 ? m + (m == 1 ? " minuto, " : " minutos, ") : "";
-var sDisplay = s > 0 ? s + (s == 1 ? " segundo" : " segundos") : "";
-return dDisplay + hDisplay + mDisplay + sDisplay};
-
-function bytesToSize(bytes) {
-return new Promise((resolve, reject) => {
-const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-if (bytes === 0) return 'n/a';
-const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)), 10);
-if (i === 0) resolve(`${bytes} ${sizes[i]}`);
-resolve(`${(bytes / (1024 ** i)).toFixed(1)} ${sizes[i]}`)})};, { quoted: m })
-} else throw 'fail'
-
-} catch {
-try {
-// 🥉 YTDL
-let info = await ytdl.getInfo(yt_play[0].url)
-let format = ytdl.chooseFormat(info.formats, { filter: 'audioonly' })
-
-await conn.sendMessage(m.chat, {
-audio: { url: format.url },
-mimetype: 'audio/mpeg'
-}, { quoted: m })
-
-} catch {
-await conn.sendMessage(m.chat, {
-text: '❌ No se pudo descargar el audio'
-}, { quoted: m })
-}}}
-}
-
-// ================= VIDEO =================
-if (command === 'play2') {
-try {
-await m.react('✅')
-
-const apiUrl = `${APINAUFRA}/ytmp4?apikey=${NAUFRA_KEY}&url=${encodeURIComponent(yt_play[0].url)}`
-
-await conn.sendMessage(m.chat, {
-video: { url: apiUrl },
-fileName: `${yt_play[0].title}.mp4`,
-mimetype: 'video/mp4',
-caption: '✅ VIDEO DESCARGADO'
-}, { quoted: m })
-
-} catch {
-try {
-// 🥈 BACKUP
-const apiUrl2 = `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(yt_play[0].url)}`
-const res2 = await fetch(apiUrl2)
-const json2 = await res2.json()
-
-if (json2?.status && json2?.result) {
-await conn.sendMessage(m.chat, {
-video: { url: json2.result },
-mimetype: 'video/mp4'
-}, { quoted: m })
-} else throw 'fail'
-
-} catch {
-try {
-// 🥉 YTDL
-let info = await ytdl.getInfo(yt_play[0].url)
-let format = ytdl.chooseFormat(info.formats, { quality: '18' })
-
-await conn.sendMessage(m.chat, {
-video: { url: format.url },
-mimetype: 'video/mp4'
-}, { quoted: m })
-
-} catch {
-await conn.sendMessage(m.chat, {
-text: '❌ No se pudo descargar el video'
-}, { quoted: m })
-}}}
-}
-
-} catch (e) {
-console.error(e)
-await conn.sendMessage(m.chat, {
-text: '❌ Error general'
-}, { quoted: m })
-}
-}
-
-handler.command = ['play', 'play2']
-export default handler
-
-// ================= SEARCH =================
-
-async function search(query) {
-const res = await yts.search(query)
-return res.videos
-}
-} catch {
-try {
-// Segundo intento con API alternativa del segundo código (comentada)
-const apiUrl2 = `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(yt_play[0].url)}`
-const res2 = await fetch(apiUrl2)
-const json2 = await res2.json()
-
-if (json2?.status && json2?.result) {
-await conn.sendMessage(m.chat, { 
-audio: { url: json2.result }, 
-mimetype: 'audio/mpeg' 
-}, { quoted: m })
-} else {
-throw new Error('API alternativa falló')
-}
-} catch {
-try {
-// Tercer intento con ytdl-core (último recurso)
-let searchh = await yts(yt_play[0].url)
-let __res = searchh.all.map(v => v).filter(v => v.type == "video")
-let infoo = await ytdl.getInfo('https://youtu.be/' + __res[0].videoId)
-let ress = await ytdl.chooseFormat(infoo.formats, { filter: 'audioonly' })
-await conn.sendMessage(m.chat, { audio: { url: ress.url }, mimetype: 'audio/mpeg' }, { quoted: m })
-} catch {
-await conn.sendMessage(m.chat, { text: '❌ Error: No se pudo descargar el audio con ningún método disponible.' }, { quoted: m })
-await m.react('❌')
-}}}
-}  
-
-if (command == 'play2') {
-try {
-await m.react('✅')
-// Mensaje de espera sin miniatura
-await conn.sendMessage(m.chat, { 
-text: '⏳ ESPERA POR FAVOR ESTOY DESCARGANDO TU VIDEO...' 
-}, { quoted: m })
-
-// Usar API para video (misma base)
-const apiUrl = `https://api-adonix.ultraplus.click/download/ytvideo?apikey=Adofreekey&url=${encodeURIComponent(yt_play[0].url)}`
-const apiResp = await fetchJson(apiUrl, HTTP_TIMEOUT_MS)
-
-if (apiResp?.status && apiResp?.data?.url) {
-await conn.sendMessage(m.chat, { 
-video: { url: apiResp.data.url }, 
-fileName: `${yt_play[0].title}.mp4`, 
-mimetype: 'video/mp4', 
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] ` 
-}, { quoted: m })
-} else {
-throw new Error('API de video no funcionó')
-}
-} catch {   
-try {  
-// Intentar con API alternativa de video
-const apiUrl2 = `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(yt_play[0].url)}`
-const res2 = await fetch(apiUrl2)
-const json2 = await res2.json()
-
-if (json2?.status && json2?.result) {
-await conn.sendMessage(m.chat, { 
-video: { url: json2.result }, 
-fileName: `${yt_play[0].title}.mp4`, 
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝘿𝙊 [✅] `, 
-mimetype: 'video/mp4' 
-}, { quoted: m })     
-} else {
-throw new Error('API alternativa de video falló')
-}
-} catch {  
-try {
-// Último recurso: ytdl-core para video
-let searchh = await yts(yt_play[0].url)
-let __res = searchh.all.map(v => v).filter(v => v.type == "video")
-let infoo = await ytdl.getInfo('https://youtu.be/' + __res[0].videoId)
-let format = ytdl.chooseFormat(infoo.formats, { quality: '18' }) // 360p
-await conn.sendMessage(m.chat, { 
-video: { url: format.url }, 
-fileName: `${yt_play[0].title}.mp4`, 
-mimetype: 'video/mp4', 
-caption: `𝙑𝙄𝘿𝙀𝙊 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼𝙕 𝘾𝙊𝙉 𝙐𝙇𝙏𝙄𝙈𝙊 𝙍𝙀𝘾𝙐𝙍𝙎𝙊 [✅] ` 
-}, { quoted: m })
-} catch {
-await conn.sendMessage(m.chat, { text: '❌ Error: No se pudo descargar el video con ningún método disponible.' }, { quoted: m })
-await m.react('❌')
-}}}}
-} catch (error) {
-console.error(error)
-await conn.sendMessage(m.chat, { text: `❌ Error general: ${error.message}` }, { quoted: m })
-await m.react('❌')
-}
-}
-handler.command = ['play', 'play2']  // Cambiados los comandos
-handler.exp = 0
-export default handler
-
-async function search(query, options = {}) {
-const search = await yts.search({ query, hl: "es", gl: "ES", ...options });
-return search.videos};
-
-function MilesNumber(number) {
-const exp = /(\d)(?=(\d{3})+(?!\d))/g;
-const rep = "$1.";
-let arr = number.toString().split(".");
-arr[0] = arr[0].replace(exp, rep);
-return arr[1] ? arr.join(".") : arr[0]};
-
-function secondString(seconds) {
-seconds = Number(seconds);
-var d = Math.floor(seconds / (3600 * 24));
-var h = Math.floor((seconds % (3600 * 24)) / 3600);
-var m = Math.floor((seconds % 3600) / 60);
-var s = Math.floor(seconds % 60);
-var dDisplay = d > 0 ? d + (d == 1 ? " día, " : " días, ") : "";
-var hDisplay = h > 0 ? h + (h == 1 ? " hora, " : " horas, ") : "";
-var mDisplay = m > 0 ? m + (m == 1 ? " minuto, " : " minutos, ") : "";
-var sDisplay = s > 0 ? s + (s == 1 ? " segundo" : " segundos") : "";
-return dDisplay + hDisplay + mDisplay + sDisplay};
-
-function bytesToSize(bytes) {
-return new Promise((resolve, reject) => {
-const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-if (bytes === 0) return 'n/a';
-const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)), 10);
-if (i === 0) resolve(`${bytes} ${sizes[i]}`);
-resolve(`${(bytes / (1024 ** i)).toFixed(1)} ${sizes[i]}`)})};
-
