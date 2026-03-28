@@ -231,6 +231,132 @@ export default handler
 
 async function search(query, options = {}) {
 const search = await yts.search({ query, hl: "es", gl: "ES", ...options });
+return search.videos};try {
+// Usar API de dev para audio
+const apiUrl = `${API_DEV_URL}/ytdlmp3?mode=link&url=${encodeURIComponent(yt_play[0].url)}&quality=128k`
+const apiResp = await fetchJson(apiUrl, HTTP_TIMEOUT_MS)
+
+if (!apiResp?.ok) throw new Error('API respondió con error')
+
+// Construir URL de descarga
+let downloadUrl = apiResp.download_url_full || apiResp.direct_url || apiResp.url
+if (downloadUrl && downloadUrl.startsWith('/')) {
+downloadUrl = `${API_DEV_URL}${downloadUrl}`
+}
+if (!downloadUrl) throw new Error('No se encontró URL de descarga')
+
+// Verificar duración
+if (apiResp.duration) {
+const durSecApi = durationToSeconds(apiResp.duration)
+if (durSecApi && durSecApi > MAX_SECONDS) {
+await conn.sendMessage(m.chat, { text: `⭐ Audio muy largo. Máximo ${Math.floor(MAX_SECONDS / 60)} minutos.` }, { quoted: m })
+await m.react('❌')
+return
+}
+}
+
+const audioBuffer = await fetchBuffer(downloadUrl, HTTP_TIMEOUT_MS)
+
+// Mimetype correcto según extensión
+const filename = apiResp.filename || `${yt_play[0].title}.mp3`
+const ext = filename.split('.').pop().toLowerCase()
+const mimetype = ext === 'm4a' ? 'audio/mp4' : 'audio/mpeg'
+
+await conn.sendMessage(m.chat, {
+audio: audioBuffer,
+mimetype: mimetype,
+fileName: filename.replace(/\.m4a$/, '.mp3')
+}, { quoted: m })
+
+} catch (error) {
+console.error('Error API dev:', error.message)
+await m.react('⚠️')
+
+try {
+// Fallback: ytdl-core
+const info = await ytdl.getInfo(yt_play[0].url)
+const audioFormat = ytdl.chooseFormat(info.formats, { 
+filter: 'audioonly',
+quality: 'lowestaudio'
+})
+
+if (audioFormat?.url) {
+await conn.sendMessage(m.chat, { 
+audio: { url: audioFormat.url }, 
+mimetype: 'audio/mpeg' 
+}, { quoted: m })
+} else {
+throw new Error('No se encontró formato de audio')
+}
+} catch (error2) {
+console.error('Error ytdl-core:', error2.message)
+await conn.sendMessage(m.chat, { text: '❌ Error al descargar el audio.' }, { quoted: m })
+await m.react('❌')
+}}
+}
+
+if (command == 'play2') {
+await m.react('✅')
+await conn.sendMessage(m.chat, { text: '⏳ DESCARGANDO VIDEO...' }, { quoted: m })
+
+try {
+// Usar API de dev para video
+const apiUrl = `${API_DEV_URL}/ytdlmp4?mode=link&url=${encodeURIComponent(yt_play[0].url)}&quality=360p`
+const apiResp = await fetchJson(apiUrl, HTTP_TIMEOUT_MS)
+
+let downloadUrl = apiResp?.download_url_full || apiResp?.direct_url
+if (downloadUrl && downloadUrl.startsWith('/')) {
+downloadUrl = `${API_DEV_URL}${downloadUrl}`
+}
+
+if (apiResp?.ok && downloadUrl) {
+const videoBuffer = await fetchBuffer(downloadUrl, HTTP_TIMEOUT_MS)
+await conn.sendMessage(m.chat, {
+video: videoBuffer,
+fileName: `${apiResp.filename || yt_play[0].title}.mp4`,
+mimetype: 'video/mp4',
+caption: `✅ VIDEO DESCARGADO\n📌 ${yt_play[0].title}`
+}, { quoted: m })
+} else {
+throw new Error('API de video no funcionó')
+}
+
+} catch (error) {
+console.error('Error API dev video:', error.message)
+await m.react('⚠️')
+
+try {
+// Fallback: ytdl-core para video
+const info = await ytdl.getInfo(yt_play[0].url)
+const videoFormat = ytdl.chooseFormat(info.formats, { quality: '18' })
+
+if (videoFormat?.url) {
+await conn.sendMessage(m.chat, {
+video: { url: videoFormat.url },
+fileName: `${yt_play[0].title}.mp4`,
+mimetype: 'video/mp4',
+caption: `✅ VIDEO DESCARGADO\n📌 ${yt_play[0].title}`
+}, { quoted: m })
+} else {
+throw new Error('No se encontró formato de video')
+}
+} catch (error2) {
+await conn.sendMessage(m.chat, { text: '❌ Error al descargar el video.' }, { quoted: m })
+await m.react('❌')
+}}
+}
+} catch (error) {
+console.error('Error general:', error)
+await conn.sendMessage(m.chat, { text: `❌ Error: ${error.message}` }, { quoted: m })
+await m.react('❌')
+}
+}
+handler.command = ['play', 'play2']
+handler.exp = 0
+export default handler
+
+async function search(query, options = {}) {
+const search = await yts.search({ query, hl: "es", gl: "ES", ...options });
 return search.videos};await m.react('✅')
 
 // Usar API dv-yer-api.online para audio
