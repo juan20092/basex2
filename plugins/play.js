@@ -3,7 +3,7 @@ import yts from "yt-search"
 
 let handler = async (m, { conn, text }) => {
 
-  if (!text) throw '✦ Escribe una canción\nEjemplo:\n.play mirame blessd'
+  if (!text) throw '✦ Escribe una canción\nEjemplo:\n.play feid normal'
 
   await m.react('🕓')
 
@@ -17,42 +17,70 @@ let handler = async (m, { conn, text }) => {
       text: `🎵 *${vid.title}*\n⏱ ${vid.timestamp}\n⬇️ Descargando...`
     }, { quoted: m })
 
-    // ================= API DV-YER =================
-    let api = `https://dv-yer-api.online/ytdlmp3?mode=link&url=${encodeURIComponent(vid.url)}&quality=128k`
+    // ================= 1️⃣ DV-YER =================
+    try {
+      let api = `https://dv-yer-api.online/ytdlmp3?mode=link&url=${encodeURIComponent(vid.url)}&quality=128k`
+      let res = await fetch(api)
+      let json = await res.json()
 
-    let res = await fetch(api)
-    let json = await res.json()
+      let url = json.download_url_full || json.url || json.direct_url
 
-    if (!json?.ok) throw 'API caída o sin respuesta válida'
+      if (url && url.startsWith('/')) {
+        url = `https://dv-yer-api.online${url}`
+      }
 
-    let audioUrl = json.download_url_full || json.url || json.direct_url
+      if (!url) throw 'Sin link dv-yer'
 
-    if (audioUrl && audioUrl.startsWith('/')) {
-      audioUrl = `https://dv-yer-api.online${audioUrl}`
+      // validar link
+      let test = await fetch(url, { method: 'HEAD' })
+      if (!test.ok) throw 'Link roto dv-yer'
+
+      await conn.sendMessage(m.chat, {
+        audio: { url: url },
+        mimetype: 'audio/mpeg',
+        fileName: `${vid.title}.mp3`
+      }, { quoted: m })
+
+      return await m.react('✅')
+
+    } catch (e) {
+      console.log('DV-YER FALLÓ:', e.message)
     }
 
-    if (!audioUrl) throw 'La API no devolvió audio'
+    // ================= 2️⃣ COBALT (EL BUENO) =================
+    try {
+      let res = await fetch('https://api.cobalt.tools/api/json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: vid.url,
+          isAudioOnly: true,
+          aFormat: "mp3"
+        })
+      })
 
-    // 🔥 VALIDAR QUE EL LINK SÍ FUNCIONA
-    let test = await fetch(audioUrl, { method: 'HEAD' })
+      let json = await res.json()
 
-    if (!test.ok) throw 'El link del audio está roto'
+      if (!json?.url) throw 'Cobalt falló'
 
-    // ✅ ENVIAR AUDIO
-    await conn.sendMessage(m.chat, {
-      audio: { url: audioUrl },
-      mimetype: 'audio/mpeg',
-      fileName: `${vid.title}.mp3`,
-      ptt: false
-    }, { quoted: m })
+      await conn.sendMessage(m.chat, {
+        audio: { url: json.url },
+        mimetype: 'audio/mpeg',
+        fileName: `${vid.title}.mp3`
+      }, { quoted: m })
 
-    await m.react('✅')
+      return await m.react('✅')
+
+    } catch (e) {
+      console.log('COBALT FALLÓ:', e.message)
+    }
+
+    // ================= ❌ TODO FALLÓ =================
+    throw 'Todas las APIs fallaron'
 
   } catch (err) {
-    console.error(err)
-
     await conn.sendMessage(m.chat, {
-      text: `❌ Error: ${err}\n\n💡 La API dv-yer está fallando ahora mismo`
+      text: `❌ Error: ${err}`
     }, { quoted: m })
 
     await m.react('❌')
