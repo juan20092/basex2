@@ -1,111 +1,133 @@
-import fetch from "node-fetch"
-import yts from "yt-search"
-import ytdl from 'ytdl-core'
-import axios from 'axios'
-import { youtubedl, youtubedlv2 } from '@bochilteam/scraper'
-import { buildDvyerUrl, getDvyerBaseUrl } from "../../lib/api-manager.js"
+import yts from 'yt-search'
 
-const HTTP_TIMEOUT_MS = 90 * 1000
-const MAX_SECONDS = 90 * 60
+export default {
+  name: 'play',
+  command: ['play'],
+  category: 'descargas',
 
-// Configuración de APIs del segundo código
-const API_AUDIO_URL = buildDvyerUrl("/ytdlmp3")
-const API_AUDIO_LEGACY_URL = buildDvyerUrl("/ytmp3")
-const API_AUDIO_ALT_URL = buildDvyerUrl("/ytaltmp3")
-const API_SEARCH_URL = buildDvyerUrl("/ytsearch")
-const AUDIO_QUALITY = "128k"
+  async run(ctx) {
+    const { sock: conn, m, from, args } = ctx
 
-// Funciones auxiliares del segundo código
-function normalizeApiUrl(url) {
-  const value = String(url || "").trim()
-  if (!value) return ""
-  if (/^https?:\/\//i.test(value)) return value
-  if (value.startsWith("/")) return `${getDvyerBaseUrl()}${value}`
-  return `${getDvyerBaseUrl()}/${value}`
-}
+    try {
+      const query = Array.isArray(args) ? args.join(' ').trim() : ''
 
-function pickApiDownloadUrl(data) {
-  return (
-    data?.download_url_full ||
-    data?.stream_url_full ||
-    data?.download_url ||
-    data?.stream_url ||
-    data?.url ||
-    data?.result?.download_url_full ||
-    data?.result?.stream_url_full ||
-    data?.result?.download_url ||
-    data?.result?.stream_url ||
-    data?.result?.url ||
-    ""
-  )
-}
+      if (!query) {
+        return await conn.sendMessage(
+          from,
+          { text: 'Ejemplo:\n.yts anuel aa' },
+          { quoted: m }
+        )
+      }
 
-function extractApiError(data, status) {
-  return (
-    data?.detail ||
-    data?.error?.message ||
-    data?.message ||
-    (status ? `HTTP ${status}` : "Error de API")
-  )
-}
+      const res = await yts(query)
+      const videos = Array.isArray(res?.videos) ? res.videos.slice(0, 10) : []
 
-async function apiGet(url, params, timeout = 35000, options = {}) {
-  const response = await axios.get(url, {
-    timeout,
-    params,
-    signal: options?.signal || null,
-    validateStatus: () => true,
-  })
+      if (!videos.length) {
+        return await conn.sendMessage(
+          from,
+          { text: 'No encontré resultados.' },
+          { quoted: m }
+        )
+      }
 
-  const data = response.data
+      let thumbBuffer = null
+      try {
+        if (videos[0]?.thumbnail) {
+          const response = await fetch(videos[0].thumbnail)
+          const arrayBuffer = await response.arrayBuffer()
+          thumbBuffer = Buffer.from(arrayBuffer)
+        }
+      } catch (e) {
+        console.error('Error descargando thumbnail:', e)
+      }
 
-  if (response.status >= 400) {
-    throw new Error(extractApiError(data, response.status))
+      const mp3Rows = videos.map((v, i) => ({
+        header: `${i + 1}`,
+        title: String(v.title || 'Sin título').slice(0, 72),
+        description: `🎵 MP3 | ⏱ ${v.timestamp || '??:??'} | 👤 ${v.author?.name || 'Desconocido'}`.slice(0, 72),
+        id: `.ytmp3 ${v.url}`
+      }))
+
+      const mp4Rows = videos.map((v, i) => ({
+        header: `${i + 1}`,
+        title: String(v.title || 'Sin título').slice(0, 72),
+        description: `🎬 MP4 | ⏱ ${v.timestamp || '??:??'} | 👤 ${v.author?.name || 'Desconocido'}`.slice(0, 72),
+        id: `.ytmp4 ${v.url}`
+      }))
+
+      if (thumbBuffer) {
+        await conn.sendMessage(
+          from,
+          {
+            image: thumbBuffer,
+            caption:
+              `🎵 *FSOCIETY BOT*\n\n` +
+              `🔎 Resultado para: *${query}*\n` +
+              `📌 Primer resultado: *${videos[0].title}*\n\n` +
+              `Ahora selecciona si quieres descargar en MP3 o MP4.`
+          },
+          { quoted: m }
+        )
+      } else {
+        await conn.sendMessage(
+          from,
+          {
+            text:
+              `🎵 *FSOCIETY BOT*\n\n` +
+              `🔎 Resultado para: *${query}*\n\n` +
+              `Selecciona si quieres descargar en MP3 o MP4.`
+          },
+          { quoted: m }
+        )
+      }
+
+      return await conn.sendMessage(
+        from,
+        {
+          text: `Resultados para: ${query}`,
+          title: 'FSOCIETY BOT',
+          subtitle: 'Selecciona formato',
+          footer: 'Descargas YouTube',
+          interactiveButtons: [
+            {
+              name: 'single_select',
+              buttonParamsJson: JSON.stringify({
+                title: '🎵 Descargar MP3',
+                sections: [
+                  {
+                    title: 'Resultados MP3',
+                    rows: mp3Rows
+                  }
+                ]
+              })
+            },
+            {
+              name: 'single_select',
+              buttonParamsJson: JSON.stringify({
+                title: '🎬 Descargar MP4',
+                sections: [
+                  {
+                    title: 'Resultados MP4',
+                    rows: mp4Rows
+                  }
+                ]
+              })
+            }
+          ]
+        },
+        { quoted: m }
+      )
+    } catch (e) {
+      console.error('Error en ysearch:', e)
+
+      return await conn.sendMessage(
+        from,
+        { text: `Error en ysearch:\n${e?.message || e}` },
+        { quoted: m }
+      )
+    }
   }
-
-  if (data?.ok === false || data?.status === false) {
-    throw new Error(extractApiError(data, response.status))
-  }
-
-  return data
-}
-
-async function resolveSearch(query) {
-  const data = await apiGet(API_SEARCH_URL, { q: query, limit: 1 }, 25000)
-  const first = data?.results?.[0]
-
-  if (!first?.url) {
-    throw new Error("No se encontró el audio.")
-  }
-
-  return {
-    videoUrl: first.url,
-    title: first.title || "audio",
-    thumbnail: first.thumbnail || null,
-  }
-}
-
-async function requestAudioLink(videoUrl, endpointUrl, sourceLabel, options = {}) {
-  const data = await apiGet(
-    endpointUrl,
-    {
-      mode: "link",
-      quality: AUDIO_QUALITY,
-      url: videoUrl,
-    },
-    45000,
-    options
-  )
-
-  const downloadUrl = normalizeApiUrl(pickApiDownloadUrl(data))
-  if (!downloadUrl) {
-    throw new Error(`La ruta ${sourceLabel} no devolvió enlace de descarga.`)
-  }
-
-  return {
-    sourceLabel,
-    downloadUrl,
-    title: data?.title || data?.result?.title || "audio",
+}    title: data?.title || data?.result?.title || "audio",
     fileName: String(data?.filename || data?.fileName || data?.result?.filename || "audio.bin").trim() || "audio.bin",
   }
 }
