@@ -2,7 +2,7 @@ import { spawn } from 'child_process'
 import fs from 'fs'
 import fetch from 'node-fetch'
 import yts from 'yt-search'
-import Jimp from 'jimp'
+//import Jimp from 'jimp'
 
 const name = 'Descargas - black clover'
 
