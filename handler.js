@@ -107,7 +107,7 @@ if (!('role' in user)) user.role = '*NOVATO(A)* 🪤'
 if (!isNumber(user.agility)) user.agility = 0
 if (!isNumber(user.anakanjing)) user.anakanjing = 0
 if (!user.warnPv) user.warnPv = false
-if (!isNumber(user.mesagge)) user.anakanjing = 0
+if (!isNumber(user.mesagge)) user.mesagge = 0
 if (!isNumber(user.anakcentaur)) user.anakcentaur = 0
 if (!isNumber(user.anakgriffin)) user.anakgriffin = 0
 if (!isNumber(user.anakkucing)) user.anakkucing = 0
@@ -1157,9 +1157,7 @@ let usedPrefix
 let _user = global.db.data && global.db.data.users && global.db.data.users[m.sender]
 
 const groupMetadata = m.isGroup
-? (global.cachedGroupMetadata
-? await global.cachedGroupMetadata(m.chat).catch((_) => null)
-: await this.groupMetadata(m.chat).catch((_) => null)) || {}
+? (await this.groupMetadata(m.chat).catch((_) => null)) || {}
 : {}
 const participants = Array.isArray(groupMetadata?.participants) ? groupMetadata.participants : []
 
@@ -1404,7 +1402,7 @@ if (!isPrems && plugin.money && global.db.data.users[m.sender].money < plugin.mo
 this.sendMessage(
 m.chat,
 {
-text: '🐈 𝙉𝙊 𝙏𝙄𝙀𝙉𝙀 𝙂𝘼𝙏𝘼𝘾𝙊𝙄𝙉𝙎',
+text: '� 𝙉𝙊 𝙏𝙄𝙀𝙉𝙀 𝙑𝙄𝙋 𝘾𝙊𝙄𝙉𝙎',
 contextInfo: {
 externalAdReply: {
 mediaUrl: null,
@@ -1526,7 +1524,7 @@ console.error(e)
 }
 if (m.limit) m.reply(+m.limit + lenguajeGB.smsCont8())
 }
-if (m.money) m.reply(+m.money + ' 𝙂𝘼𝙏𝘼𝘾𝙊𝙄𝙉𝙎 🐱 𝙐𝙎𝘼𝘿𝙊(𝙎)')
+if (m.money) m.reply(+m.money + ' �𝙄𝙋 𝘾𝙊𝙄𝙉𝙎 💎 𝙐𝙎𝘼𝘿𝙊(𝙎)')
 break
 }
 } catch (e) {
@@ -1926,7 +1924,7 @@ text: msg,
 contextInfo: {
 externalAdReply: {
 title: lenguajeGB.smsAvisoAG().slice(0, -2),
-body: [wm, '😻 𝗦𝘂𝗽𝗲𝗿 ' + gt + ' 😻', ''].getRandom(),
+body: [wm, '� 𝗦𝘂𝗽𝗲𝗿 𝗩𝗜𝗣 𝗕𝗢𝗧 💎', ''].getRandom(),
 thumbnail: gataImg,
 sourceUrl: accountsgb
 }
@@ -1944,3 +1942,4 @@ unwatchFile(file)
 console.log(chalk.redBright("Update 'handler.js'"))
 //if (global.reloadHandler) console.log(await global.reloadHandler());
 })
+
