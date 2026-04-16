@@ -1,5 +1,5 @@
 {
-  "name": "GataBot-MD",
+  "name": "Vip-Bot",
   "version": "1.7.0",
   "description": "Super Bot WhatsApp",
   "main": "index.js",
@@ -16,9 +16,9 @@
     "test": "node test.js",
     "test2": "nodemon index.js"
   },
-  "homepage": "https://github.com/GataNina-Li/GataBot-MD",
+  "homepage": "https://github.com/juan20092/basex2",
   "author": {
-    "name": "GataNina-Li"
+    "name": "Vip-Bot"
   },
   "repository": {
     "type": "git",
@@ -31,7 +31,7 @@
   "dependencies": {
 
   
-    "@whiskeysockets/baileys": "github:gatanina-li/baileys",
+    "@whiskeysockets/baileys": "github:juan20092/baylesXR",
 
 
     
