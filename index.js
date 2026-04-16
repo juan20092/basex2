@@ -22,10 +22,15 @@ const rl = createInterface(process.stdin, process.stdout)
 //const app = express()
 //const port = process.env.PORT || 8080;
 
-say('Gata\nBot\nMD', {
+say('vip\nBot\nMD', {
 font: 'chrome',
 align: 'center',
-gradient: ['red', 'magenta']
+gradient: ['cyan', 'magenta']
+})
+say('✦ V I P   E D I T I O N ✦', {
+font: 'console',
+align: 'center',
+gradient: ['magenta', 'cyan']
 })
 say('Powered By GataDios', {
 font: 'console',
@@ -88,30 +93,42 @@ try {
 const packageJsonData = await fsPromises.readFile(packageJsonPath, 'utf-8')
 const packageJsonObj = JSON.parse(packageJsonData)
 const currentTime = new Date().toLocaleString()
-let lineM = '⋯ ⋯ ⋯ ⋯ ⋯ ⋯ ⋯ ⋯ ⋯ ⋯ ⋯ 》'
+const cpuModel = os.cpus()[0]?.model ?? 'Desconocido'
+const cpuCount = os.cpus().length
+const platform = os.platform()
+let lineM = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+let lineS = '┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅'
 console.log(
-chalk.yellow(`╭${lineM}
-┊${chalk.blueBright('╭┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅')}
-┊${chalk.blueBright('┊')}${chalk.yellow(`🖥️ ${os.type()}, ${os.release()} - ${os.arch()}`)}
-┊${chalk.blueBright('┊')}${chalk.yellow(`💾 Total RAM: ${ramInGB.toFixed(2)} GB`)}
-┊${chalk.blueBright('┊')}${chalk.yellow(`💽 Free RAM: ${freeRamInGB.toFixed(2)} GB`)}
-┊${chalk.blueBright('╰┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅')}
-┊${chalk.blueBright('╭┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅')}
-┊${chalk.blueBright('┊')} ${chalk.blue.bold('🟢INFORMACIÓN :')}
-┊${chalk.blueBright('┊')} ${chalk.blueBright('┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅')} 
-┊${chalk.blueBright('┊')}${chalk.cyan(`💚 Nombre: ${packageJsonObj.name}`)}
-┊${chalk.blueBright('┊')}${chalk.cyan(`𓃠 Versión: ${packageJsonObj.version}`)}
-┊${chalk.blueBright('┊')}${chalk.cyan(`💜 Descripción: ${packageJsonObj.description}`)}
-┊${chalk.blueBright('┊')}${chalk.cyan(`😺 Project Author: ${packageJsonObj.author.name} (@gata_dios)`)}
-┊${chalk.blueBright('┊')}${chalk.blueBright('┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅')} 
-┊${chalk.blueBright('┊')}${chalk.yellow('💜 Colaborador:')}
-┊${chalk.blueBright('┊')}${chalk.yellow('• elrebelde21 (Mario ofc)')}
-┊${chalk.blueBright('╰┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅')} 
-┊${chalk.blueBright('╭┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅')}
-┊${chalk.blueBright('┊')}${chalk.cyan('⏰ Hora Actual :')}
-┊${chalk.blueBright('┊')}${chalk.cyan(`${currentTime}`)}
-┊${chalk.blueBright('╰┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅')} 
-╰${lineM}`)
+chalk.magenta(`
+╭${lineM}╮
+${chalk.bold.cyanBright('  ✦ ✦ ✦ V I P   E D I T I O N  ✦ ✦ ✦')}
+╰${lineM}╯`) +
+chalk.cyan(`
+╭${lineM}╮
+┊  ${chalk.bold.magenta('🖥️  SISTEMA')}
+┊  ${chalk.dim(lineS)}
+┊  ${chalk.yellow('💻 OS       : ')}${chalk.white(`${os.type()} ${os.release()} (${os.arch()})`)}
+┊  ${chalk.yellow('🧩 CPU      : ')}${chalk.white(`${cpuModel} × ${cpuCount} cores`)}
+┊  ${chalk.yellow('📦 Platform : ')}${chalk.white(platform)}
+┊  ${chalk.yellow('💾 RAM Total: ')}${chalk.white(`${ramInGB.toFixed(2)} GB`)}
+┊  ${chalk.yellow('💽 RAM Libre: ')}${chalk.greenBright(`${freeRamInGB.toFixed(2)} GB`)}
+╰${lineM}╯`) +
+chalk.cyan(`
+╭${lineM}╮
+┊  ${chalk.bold.magenta('🤖 BOT INFO')}
+┊  ${chalk.dim(lineS)}
+┊  ${chalk.yellow('📛 Nombre   : ')}${chalk.bold.white(packageJsonObj.name)}
+┊  ${chalk.yellow('🔖 Versión  : ')}${chalk.bold.greenBright(`v${packageJsonObj.version}`)}
+┊  ${chalk.yellow('📝 Desc     : ')}${chalk.white(packageJsonObj.description)}
+┊  ${chalk.yellow('😺 Autor    : ')}${chalk.bold.magentaBright(`${packageJsonObj.author.name} (@gata_dios)`)}
+┊  ${chalk.yellow('💜 Colab    : ')}${chalk.white('juanwz7 (juan ofc)')}
+╰${lineM}╯`) +
+chalk.cyan(`
+╭${lineM}╮
+┊  ${chalk.bold.magenta('⏰ INICIO')}
+┊  ${chalk.dim(lineS)}
+┊  ${chalk.yellow('📅 Fecha/Hora: ')}${chalk.bold.cyanBright(currentTime)}
+╰${lineM}╯`)
 )
 setInterval(() => {}, 1000)
 } catch (err) {
