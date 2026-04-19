@@ -12,15 +12,13 @@ import path from 'path'
 import os from 'os'
 import { promises as fsPromises } from 'fs'
 
-// https://stackoverflow.com/a/50052194
+
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const require = createRequire(__dirname) //Incorpora la capacidad de crear el método 'requerir'
-const {name, author} = require(join(__dirname, './package.json')) //https://www.stefanjudis.com/snippets/how-to-import-json-files-in-es-modules-node-js/
+const require = createRequire(__dirname) 
+const {name, author} = require(join(__dirname, './package.json')) 
 const {say} = cfonts
 const rl = createInterface(process.stdin, process.stdout)
 
-//const app = express()
-//const port = process.env.PORT || 8080;
 
 say('vip\nBot\nMD', {
 font: 'chrome',
@@ -32,7 +30,7 @@ font: 'console',
 align: 'center',
 gradient: ['magenta', 'cyan']
 })
-say('Powered By GataDios', {
+say('Powered By 𝘑𝘶𝘢𝘯𝘊𝘰𝘳𝘦𝘞𝘻', {
 font: 'console',
 align: 'center',
 gradient: ['red', 'magenta']
@@ -120,7 +118,7 @@ chalk.cyan(`
 ┊  ${chalk.yellow('📛 Nombre   : ')}${chalk.bold.white(packageJsonObj.name)}
 ┊  ${chalk.yellow('🔖 Versión  : ')}${chalk.bold.greenBright(`v${packageJsonObj.version}`)}
 ┊  ${chalk.yellow('📝 Desc     : ')}${chalk.white(packageJsonObj.description)}
-┊  ${chalk.yellow('😺 Autor    : ')}${chalk.bold.magentaBright(`${packageJsonObj.author.name} (@gata_dios)`)}
+┊  ${chalk.yellow('😺 Autor    : ')}${chalk.bold.magentaBright(`${packageJsonObj.author.name} (𝘑𝘶𝘢𝘯𝘊𝘰𝘳𝘦𝘞𝘻)`)}
 ┊  ${chalk.yellow('💜 Colab    : ')}${chalk.white('juanwz7 (juan ofc)')}
 ╰${lineM}╯`) +
 chalk.cyan(`
