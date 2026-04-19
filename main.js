@@ -30,7 +30,7 @@ import chalk from 'chalk'
 import syntaxerror from 'syntax-error'
 import { format } from 'util'
 import pino from 'pino'
-import Pino from 'pino'
+const Pino = pino
 import { Boom } from '@hapi/boom'
 import os from 'os'
 import { makeWASocket, protoType, serialize } from './lib/simple.js'
@@ -40,7 +40,6 @@ import Datastore from '@seald-io/nedb'
 import store from './lib/store.js'
 import readline from 'readline'
 import NodeCache from 'node-cache'
-import { gataJadiBot } from './plugins/jadibot-serbot.js'
 import pkg from 'google-libphonenumber'
 const {PhoneNumberUtil} = pkg
 const phoneUtil = PhoneNumberUtil.getInstance()
@@ -258,8 +257,8 @@ console.error('Error cargando base de datos:', err)
 })
 
 async function gracefulShutdown() {
-await global.db.save()
 console.log('Guardando base de datos antes de cerrar...')
+await global.db.save()
 process.exit(0)
 }
 process.on('SIGINT', gracefulShutdown)
@@ -339,7 +338,7 @@ const connectionOptions = {
 logger: pino({level: 'silent'}),
 printQRInTerminal: opcion == '1' ? true : methodCodeQR ? true : false,
 mobile: MethodMobile,
-browser: opcion == '1' ? ['Vip-Bot', 'Edge', '20.0.04'] : methodCodeQR ? ['Vip-Bot', 'Edge', '20.0.04'] : ['Ubuntu', 'Chrome', '20.0.04'],
+browser: opcion == '1' ? ['GataBot-MD', 'Edge', '20.0.04'] : methodCodeQR ? ['GataBot-MD', 'Edge', '20.0.04'] : ['Ubuntu', 'Chrome', '20.0.04'],
 auth: {
 creds: state.creds,
 keys: makeCacheableSignalKeyStore(state.keys, Pino({level: 'fatal'}).child({level: 'fatal'}))
@@ -356,8 +355,8 @@ return msg?.message || ''
 return ''
 }
 },
-msgRetryCounterCache: msgRetryCounterCache || new Map(),
-userDevicesCache: userDevicesCache || new Map(),
+msgRetryCounterCache: msgRetryCounterCache,
+userDevicesCache: userDevicesCache,
 defaultQueryTimeoutMs: undefined,
 cachedGroupMetadata: (jid) => global.conn?.chats?.[jid] ?? {},
 version: [2, 3000, 1033959288],
@@ -606,18 +605,34 @@ async function filesInit(folder) {
       await filesInit(fullPath);
     } else {
       try {
-        const file = global.__filename(fullPath);
+        const file = global.__filename(fullPath, false);
+        const source = readFileSync(fullPath, 'utf8');
+        const err = syntaxerror(source, filename, {
+          sourceType: 'module',
+          allowAwaitOutsideFunction: true,
+        });
+
+        if (err) {
+          conn.logger.error(`Syntax error while loading '${fullPath}'\n${format(err)}`);
+          delete global.plugins[filename];
+          continue;
+        }
+
         const module = await import(file);
         global.plugins[filename] = module.default || module;
       } catch (e) {
-        conn.logger.error(e);
+        conn.logger.error(`Error requiring plugin '${fullPath}'\n${format(e)}`);
         delete global.plugins[filename];
       }
     }
   }
 }
 
-filesInit(pluginFolder).then(() => console.log(Object.keys(global.plugins))).catch(console.error);
+filesInit(pluginFolder)
+  .then(() => {
+    global.plugins = Object.fromEntries(Object.entries(global.plugins).sort(([a], [b]) => a.localeCompare(b)));
+  })
+  .catch((e) => conn.logger.error(`Plugin bootstrap failed\n${format(e)}`));
 
 // Reload
 global.reload = async (_ev, filename) => {
